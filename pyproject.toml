@@ -1,0 +1,26 @@
+[project]
+name = "garmin-fit-lite"
+version = "0.1.0"
+description = "Minimal Garmin FIT utilities: sync CN->Global, cycling VO2max, lake lap counting."
+authors = [ { name = "Tiexin Guo", email = "guotiexin@gmail.com" } ]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "garth",
+    "fitparse",
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "requests",
+    "fastapi>=0.115.0",
+    "uvicorn",
+    "python-dotenv>=1.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["garmin_lite", "garminconnect"]
