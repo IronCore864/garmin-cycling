@@ -15,6 +15,7 @@ Credentials are read from the ``env`` file or environment variables:
 """
 
 import argparse
+import calendar
 import io
 import logging
 import zipfile
@@ -225,6 +226,75 @@ def _run_gear(args: argparse.Namespace) -> None:
     print("\n" + _format_gear_report(year, gear_activities, no_gear))
 
 
+def _run_laps(args: argparse.Namespace) -> None:
+    import fitparse
+
+    from garmin.laps import (
+        DEFAULT_LAKE_LATITUDE,
+        DEFAULT_LAKE_LONGITUDE,
+        DEFAULT_LAKE_RADIUS_M,
+        _MAX_START_DISTANCE_M,
+        _count_circles,
+        _haversine,
+        _parse_points,
+    )
+
+    today = date.today()
+    if args.year and args.month:
+        start = date(args.year, args.month, 1)
+        end = date(args.year, args.month, calendar.monthrange(args.year, args.month)[1])
+    elif args.year:
+        start = date(args.year, 1, 1)
+        end = date(args.year, 12, 31)
+    elif args.month:
+        start = date(today.year, args.month, 1)
+        end = date(today.year, args.month, calendar.monthrange(today.year, args.month)[1])
+    else:
+        start = date.fromisoformat(args.start)
+        end = date.fromisoformat(args.end)
+
+    downloads = Path(args.dir)
+    if not downloads.is_dir():
+        print(f"Directory not found: {downloads}")
+        return
+
+    lake_center = (DEFAULT_LAKE_LATITUDE, DEFAULT_LAKE_LONGITUDE)
+    lake_radius_km = DEFAULT_LAKE_RADIUS_M / 1000.0
+    total_laps = 0
+    files_with_laps = 0
+
+    fit_files = sorted(
+        f for f in downloads.glob("*.fit")
+        if len(f.name) >= 10 and f.name[:10] >= start.isoformat() and f.name[:10] <= end.isoformat()
+    )
+
+    if not fit_files:
+        print(f"No FIT files found in {downloads} for {start} to {end}.")
+        return
+
+    print(f"Scanning {len(fit_files)} FIT files from {start} to {end}...\n")
+
+    for fp in fit_files:
+        try:
+            fitfile = fitparse.FitFile(str(fp))
+            points = _parse_points(fitfile)
+        except Exception:
+            continue
+        if len(points) == 0:
+            continue
+        start_lat, start_lon = points[0]
+        if _haversine(start_lat, start_lon, *lake_center) > _MAX_START_DISTANCE_M:
+            continue
+        laps = _count_circles(points, lake_center, lake_radius_km)
+        if laps > 0:
+            total_laps += laps
+            files_with_laps += 1
+            unit = "circle" if laps == 1 else "circles"
+            print(f"  {fp.name[:10]}  {laps} {unit}")
+
+    print(f"\nTotal: {total_laps} circles from {files_with_laps} activities ({start} to {end})")
+
+
 def _safe_name(text: str) -> str:
     """Make a string safe to use in a filename."""
     keep = "-_. "
@@ -338,6 +408,23 @@ def main() -> None:
         help="Year to report on (default: current year).",
     )
     gear_parser.set_defaults(func=_run_gear)
+
+    laps_parser = subparsers.add_parser(
+        "laps", help="Count lake laps from local FIT files in a date range."
+    )
+    laps_parser.add_argument(
+        "--start", default="2026-01-01", help="Start date YYYY-MM-DD (inclusive)."
+    )
+    laps_parser.add_argument(
+        "--end", default=date.today().isoformat(),
+        help="End date YYYY-MM-DD (inclusive, default: today).",
+    )
+    laps_parser.add_argument("--year", type=int, help="Count for a specific year.")
+    laps_parser.add_argument("--month", type=int, help="Count for a specific month (1-12).")
+    laps_parser.add_argument(
+        "--dir", default="downloads", help="Directory containing FIT files."
+    )
+    laps_parser.set_defaults(func=_run_laps)
 
     download_parser = subparsers.add_parser(
         "download", help="Download activities in a date range as FIT or TCX."
