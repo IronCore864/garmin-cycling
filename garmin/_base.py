@@ -21,11 +21,10 @@ import garth  # noqa: E402
 
 logger = logging.getLogger("garmin")
 
-_LOGIN_RETRIES = 5
-# Graduated delay schedule (seconds). The first failure is often a spurious
-# 429 from Garmin's SSO endpoint that clears on an immediate retry, so we
-# retry quickly first and only escalate the backoff if it keeps failing.
-_RETRY_DELAYS = [2, 10, 30, 60]
+_LOGIN_RETRIES = 7
+# Graduated delay schedule (seconds). Garmin's SSO rate limits can persist
+# for several minutes, so we escalate aggressively.
+_RETRY_DELAYS = [5, 15, 30, 60, 120, 180]
 
 # Cached OAuth tokens are reused across runs to avoid repeated full SSO logins
 # (which Garmin rate-limits with 429s). Override the location with GARMINTOKENS.
@@ -58,7 +57,7 @@ class BaseClient:
     _logged_in: bool = field(default=False, init=False, repr=False)
 
     def __post_init__(self) -> None:
-        self._garth = garth.Client()
+        self._garth = garth.Client(pool_connections=20, pool_maxsize=20)
 
     @property
     def domain(self) -> str:
@@ -126,6 +125,14 @@ class BaseClient:
             # Validate (and trigger oauth2 refresh if needed) with a cheap call.
             self._garth.connectapi("/userprofile-service/socialProfile")
         except Exception as exc:  # noqa: BLE001
+            # If validation failed due to rate-limiting, the tokens themselves
+            # are likely still valid — trust them rather than triggering a full
+            # SSO login (which will also be rate-limited).
+            if _is_rate_limited(exc):
+                logger.warning(
+                    "Cached token validation hit 429; trusting cached tokens."
+                )
+                return True
             logger.info("Cached Garmin tokens unusable (%s); logging in fresh.", exc)
             return False
         source = "env" if token_env else "disk"
