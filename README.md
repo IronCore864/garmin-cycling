@@ -1,74 +1,85 @@
-# Garmin FIT Lite
+# Garmin Cycling
 
-A minimal, database-free rewrite of the Garmin FIT utilities app. It has two parts:
+Garmin Connect utilities focused on cycling. It provides a reusable
+`garmin` package plus a few entry points:
 
-1. **A script** (`script.py`) that runs the full workflow.
-2. **An API** (`app.py`) that exposes a single endpoint: `GET /api/cron`, which
-   only syncs the latest 3 activities from Garmin CN to Garmin Global.
+- **`main.py`** — unified CLI with three subcommands:
+  - `sync`: full workflow — sync CN→Global, latest cycling VO2max,
+    power/HR analytics, lake lap counting, and a past-month VO2max image.
+  - `gear`: list a year's cycling activities grouped by gear (bike).
+  - `download`: bulk-download activities in a date range as FIT/TCX.
+- **`app.py`** — FastAPI app exposing `GET /api/cron`, which syncs the latest
+  3 activities from Garmin CN to Garmin Global.
 
-All configuration comes from environment variables — only Garmin CN and Garmin
-Global credentials are needed. There is no database.
+## The `garmin` package
 
-## Script workflow
+Organised by functionality rather than one large class:
 
-The **script** runs all of these steps:
+```
+garmin/
+├── __init__.py     # public exports
+├── _base.py        # BaseClient: auth + low-level connectapi/download/upload
+├── _utils.py       # shared date helpers
+├── activities.py   # ActivitiesMixin: list + download activities
+├── gear.py         # GearMixin: gear (bike) endpoints + stats
+├── vo2.py          # VO2Mixin + cycling VO2max plotting
+├── laps.py         # lake lap (circle) counting from FIT GPS tracks
+├── sync.py         # CN -> Global activity sync
+├── config.py       # credential configuration
+├── workflow.py     # combined sync + analysis workflow
+└── client.py       # composed GarminClient + login factories
+```
 
-1. Sync the latest **3** activities from Garmin CN to Garmin Global.
-2. Fetch the latest cycling **VO2max precise value** (today → yesterday →
-   nearest earlier day within the past month).
-3. Count **lake circles** for the latest activity (default lake: Xinglong Lake).
-4. Generate a cycling **VO2max image** for the past month.
-
-## API
-
-The **API** exposes only `GET /api/cron`, which performs **step 1 only**:
-syncing the latest 3 activities from Garmin CN to Garmin Global.
+`GarminClient` composes the endpoint groups, so a single instance exposes
+`get_activities`, `download_activity`, `get_gear`, `get_vo2max`, etc. Each
+client owns its own `garth` session, so multiple accounts (CN + Global) can
+be used at the same time.
 
 ## Configuration
 
-Set these environment variables (see `.env.example`):
+Credentials are read from the `env` file (repo root) and/or environment
+variables. Environment variables take precedence.
 
-| Variable                | Description              |
-| ----------------------- | ------------------------ |
-| `GARMIN_CN_EMAIL`       | Garmin CN account email  |
-| `GARMIN_CN_PASSWORD`    | Garmin CN password       |
-| `GARMIN_GLOBAL_EMAIL`   | Garmin Global email      |
-| `GARMIN_GLOBAL_PASSWORD`| Garmin Global password   |
+| Variable                 | Description                          |
+| ------------------------ | ------------------------------------ |
+| `GARMIN_CN_EMAIL`        | Garmin CN account email              |
+| `GARMIN_CN_PASSWORD`     | Garmin CN password                   |
+| `GARMIN_GLOBAL_EMAIL`    | Garmin Global email (sync only)      |
+| `GARMIN_GLOBAL_PASSWORD` | Garmin Global password (sync only)   |
+
+The legacy `env` keys `username` / `password` are still accepted as aliases
+for the Garmin CN account.
+
+Example `env`:
+
+```
+GARMIN_CN_EMAIL=you@example.com
+GARMIN_CN_PASSWORD=...
+GARMIN_GLOBAL_EMAIL=you@example.com
+GARMIN_GLOBAL_PASSWORD=...
+```
 
 ## Install
 
 ```bash
-pip install -e .
+uv sync
 ```
 
-## Run the script
+## Run the CLI
 
 ```bash
-python script.py
-# optional: choose the VO2max image output path
-python script.py --vo2max-image /tmp/vo2max.png
+uv run python main.py                  # show help (no default action)
+uv run python main.py sync             # sync + analysis workflow
+uv run python main.py sync --vo2max-image /tmp/vo2max.png
+uv run python main.py gear             # this year's activities grouped by gear
+uv run python main.py gear --year 2025
+uv run python main.py download --start 2026-04-22 --end 2026-06-12 --format fit
 ```
 
-## Run the API
+## Run the sync API
 
 ```bash
-uvicorn app:app --host 0.0.0.0 --port 8000
+uv run uvicorn app:app --host 0.0.0.0 --port 8000
 # then:
 curl http://localhost:8000/api/cron
-```
-
-## Project layout
-
-```
-garmin-fit-lite/
-├── app.py                 # FastAPI app with only /api/cron
-├── script.py              # CLI entry point
-├── garmin_lite/
-│   ├── config.py          # env-var configuration
-│   ├── client.py          # Garmin CN/Global client login helpers
-│   ├── sync.py            # CN -> Global activity sync
-│   ├── vo2.py             # cycling VO2max fetch + monthly plot
-│   ├── laps.py            # lake lap (circle) counting
-│   └── workflow.py        # shared workflow used by script + API
-└── garminconnect/         # reused Garmin Connect API wrapper
 ```

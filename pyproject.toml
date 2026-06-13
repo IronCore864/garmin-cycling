@@ -1,26 +1,20 @@
 [project]
-name = "garmin-fit-lite"
+name = "garmin-cycling"
 version = "0.1.0"
-description = "Minimal Garmin FIT utilities: sync CN->Global, cycling VO2max, lake lap counting."
-authors = [ { name = "Tiexin Guo", email = "guotiexin@gmail.com" } ]
+description = "Garmin Connect utilities: cycling analysis, CN->Global sync, VO2max, lake lap counting."
 readme = "README.md"
-license = { text = "MIT" }
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
-    "garth",
+    "curl-cffi>=0.15.0",
+    # Pin garth to 0.6.3: it uses the classic web-SSO login flow
+    # (sso.{domain}/sso) which works for garmin.cn. garth >=0.7 switched to a
+    # mobile-API flow (mobile.integration.garmin.com/gcm/android) that fails
+    # with 429 / SSL EOF errors for the CN region.
+    "garth==0.6.3",
     "fitparse",
     "numpy",
     "pandas",
     "matplotlib",
-    "requests",
     "fastapi>=0.115.0",
     "uvicorn",
-    "python-dotenv>=1.0.0",
 ]
-
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-packages = ["garmin_lite", "garminconnect"]

@@ -2,20 +2,20 @@
 
 import logging
 
-from dotenv import load_dotenv
-
-load_dotenv(override=True)
-
-from fastapi import FastAPI
-
-from garmin_lite.client import make_cn_client, make_global_client
-from garmin_lite.config import load_config
-from garmin_lite.sync import sync_latest
+from garmin.client import make_cn_client, make_global_client
+from garmin.config import load_config
 
 logging.basicConfig(level=logging.INFO)
 
+try:
+    from fastapi import FastAPI
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "FastAPI is required to run the API. Install with: pip install fastapi uvicorn"
+    ) from exc
+
 app = FastAPI(
-    title="Garmin FIT Lite API",
+    title="Garmin Cycling API",
     description="Minimal Garmin sync API.",
 )
 
@@ -27,7 +27,7 @@ def run_cron():
         config = load_config()
         cn_client = make_cn_client(config)
         global_client = make_global_client(config)
-        result = sync_latest(cn_client, global_client, activities_num=3)
+        result = cn_client.sync_latest_to(global_client, activities_num=3)
         return {"message": "Sync done.", "result": result}
     except Exception as exc:  # noqa: BLE001
         return {"error": str(exc)}
