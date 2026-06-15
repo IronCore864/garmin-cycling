@@ -1,2 +1,10 @@
+.PHONY: lint fmt test
+
+lint:
+	uvx ruff check .
+
 fmt:
-	uvx ruff check --select I --fix .
+	uvx ruff check --fix .
+
+test:
+	uv run pytest

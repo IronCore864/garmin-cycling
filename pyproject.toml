@@ -18,3 +18,23 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+# I  = import sorting (previously the only check, via the Makefile)
+# E/W= pycodestyle, F = pyflakes, UP = pyupgrade,
+# B  = flake8-bugbear, BLE = flake8-blind-except (matches the `# noqa: BLE001`s)
+select = ["E", "W", "F", "I", "UP", "B", "BLE"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

@@ -21,15 +21,38 @@ as methods on a client instance (e.g. ``client.count_latest_activity_laps()``).
 from .analytics import max_avg_pwr_and_hr
 from .client import GarminClient, make_cn_client, make_global_client
 from .config import Config, Credentials, load_config
+from .gear import GearActivity, GearReport
+from .laps import (
+    DEFAULT_LAKE,
+    Lake,
+    LapResult,
+    count_circles,
+    count_fit_laps,
+    count_laps_in_directory,
+)
 from .workflow import run_workflow
 
 __all__ = [
+    # Client + factories
     "GarminClient",
     "make_cn_client",
     "make_global_client",
+    # Configuration
     "Config",
     "Credentials",
     "load_config",
+    # Analytics
     "max_avg_pwr_and_hr",
+    # Gear
+    "GearActivity",
+    "GearReport",
+    # Laps
+    "Lake",
+    "DEFAULT_LAKE",
+    "LapResult",
+    "count_circles",
+    "count_fit_laps",
+    "count_laps_in_directory",
+    # Workflow
     "run_workflow",
 ]

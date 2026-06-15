@@ -2,24 +2,15 @@
 
 from __future__ import annotations
 
-import io
 import logging
 import os
 import tempfile
-import zipfile
+
+from ._fit import extract_fit_bytes
 
 logger = logging.getLogger("garmin")
 
 DEFAULT_ACTIVITIES_NUM = 3
-
-
-def _extract_fit_bytes(activity_bytes: bytes) -> bytes | None:
-    with zipfile.ZipFile(io.BytesIO(activity_bytes)) as zipf:
-        for fname in zipf.namelist():
-            if fname.endswith(".fit"):
-                with zipf.open(fname) as fit_file:
-                    return fit_file.read()
-    return None
 
 
 class SyncMixin:
@@ -57,7 +48,7 @@ class SyncMixin:
             try:
                 logger.info("Downloading activity %s from source...", activity_id)
                 activity_bytes = self.download_activity(activity_id, fmt="fit")
-                fit_bytes = _extract_fit_bytes(activity_bytes)
+                fit_bytes = extract_fit_bytes(activity_bytes)
             except Exception as exc:  # noqa: BLE001
                 result["status"] = "error"
                 result["detail"] = f"Download failed: {exc}"

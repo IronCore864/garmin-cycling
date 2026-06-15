@@ -8,21 +8,13 @@ from __future__ import annotations
 
 import io
 import logging
-import zipfile
+
+from ._fit import extract_fit_bytes
 
 logger = logging.getLogger("garmin")
 
 # Durations (minutes) to compute rolling max average power for.
 DEFAULT_DURATIONS = [1, 2, 3, 4, 5, 20, 60, 120, 180, 240, 300, 360]
-
-
-def _extract_fit_bytes(activity_bytes: bytes) -> bytes | None:
-    with zipfile.ZipFile(io.BytesIO(activity_bytes)) as zipf:
-        for fname in zipf.namelist():
-            if fname.endswith(".fit"):
-                with zipf.open(fname) as fit_file:
-                    return fit_file.read()
-    return None
 
 
 def max_avg_pwr_and_hr(fit_file, durations: list[int] | None = None) -> dict:
@@ -119,7 +111,7 @@ class AnalyticsMixin:
 
         activity_id = activities[0].get("activityId")
         activity_bytes = self.download_activity(activity_id, fmt="fit")
-        fit_bytes = _extract_fit_bytes(activity_bytes)
+        fit_bytes = extract_fit_bytes(activity_bytes)
         if not fit_bytes:
             logger.warning("No .fit file in latest activity archive.")
             return {}

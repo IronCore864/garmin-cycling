@@ -2,10 +2,74 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
 from ._utils import activity_in_range, parse_date
+
+
+@dataclass(frozen=True)
+class GearActivity:
+    """A cycling activity summarised for per-gear reporting."""
+
+    id: int | str | None
+    name: str
+    date: str
+    distance_km: float
+    duration_min: float
+    avg_speed_kmh: float
+
+    @classmethod
+    def from_activity(cls, activity: dict[str, Any]) -> GearActivity:
+        """Build a :class:`GearActivity` from a raw Garmin activity dict."""
+        distance_m = activity.get("distance", 0) or 0
+        duration_s = activity.get("duration", 0) or 0
+        return cls(
+            id=activity.get("activityId"),
+            name=activity.get("activityName", "Unnamed"),
+            date=activity.get("startTimeLocal", ""),
+            distance_km=round(distance_m / 1000, 2) if distance_m else 0,
+            duration_min=round(duration_s / 60, 1) if duration_s else 0,
+            avg_speed_kmh=(
+                round((distance_m / 1000) / (duration_s / 3600), 1)
+                if duration_s and distance_m
+                else 0
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class GearReport:
+    """A year's cycling activities grouped by the gear (bike) used."""
+
+    year: int
+    by_gear: dict[str, list[GearActivity]]
+    no_gear: list[GearActivity]
+
+    @property
+    def groups(self) -> list[list[GearActivity]]:
+        """All activity groups, including the no-gear bucket."""
+        return list(self.by_gear.values()) + [self.no_gear]
+
+    @property
+    def total_rides(self) -> int:
+        return sum(len(group) for group in self.groups)
+
+    @property
+    def total_distance_km(self) -> float:
+        return sum(a.distance_km for group in self.groups for a in group)
+
+    @property
+    def total_duration_min(self) -> float:
+        return sum(a.duration_min for group in self.groups for a in group)
+
+
+def _gear_name(gear: dict[str, Any]) -> str:
+    """Best display name for a gear dict."""
+    return gear.get("displayName") or gear.get("customMakeModel") or "Unknown Gear"
 
 
 class GearMixin:
@@ -101,3 +165,39 @@ class GearMixin:
             "total_duration_hours": round(total_duration / 3600, 2),
             "total_elevation_m": round(total_elevation, 1),
         }
+
+    def build_gear_report(
+        self,
+        year: int,
+        on_progress: Callable[[int, int], None] | None = None,
+    ) -> GearReport:
+        """Group a year's cycling activities by the gear (bike) used.
+
+        Args:
+            year: Calendar year to report on.
+            on_progress: Optional callback invoked as ``(done, total)`` after
+                each activity, so callers (e.g. a CLI) can show progress.
+
+        Returns:
+            A :class:`GearReport` with activities grouped per gear plus a
+            no-gear bucket.
+        """
+        activities = self.get_activities(
+            f"{year}-01-01", f"{year}-12-31", activity_type="cycling"
+        )
+
+        by_gear: dict[str, list[GearActivity]] = defaultdict(list)
+        no_gear: list[GearActivity] = []
+        total = len(activities)
+        for i, activity in enumerate(activities, start=1):
+            info = GearActivity.from_activity(activity)
+            gear_list = self.get_activity_gear(info.id)
+            if gear_list:
+                for gear in gear_list:
+                    by_gear[_gear_name(gear)].append(info)
+            else:
+                no_gear.append(info)
+            if on_progress is not None:
+                on_progress(i, total)
+
+        return GearReport(year=year, by_gear=dict(by_gear), no_gear=no_gear)

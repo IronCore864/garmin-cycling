@@ -29,3 +29,15 @@ def activity_in_range(activity: dict, start: date, end: date) -> bool:
         return start <= activity_date <= end
     except (ValueError, TypeError):
         return False
+
+
+def safe_filename(text: str) -> str:
+    """Make a string safe to use as a filename component.
+
+    Alphanumerics and ``-_. `` are kept; everything else becomes ``_``. Spaces
+    are collapsed to underscores. Falls back to ``"activity"`` when the result
+    would be empty.
+    """
+    keep = "-_. "
+    cleaned = "".join(c if c.isalnum() or c in keep else "_" for c in text)
+    return cleaned.strip().replace(" ", "_") or "activity"

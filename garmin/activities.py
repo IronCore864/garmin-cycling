@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 from typing import Any
 
-from ._utils import to_date_str
+from ._fit import write_fit_download
+from ._utils import safe_filename, to_date_str
 
 
 class ActivitiesMixin:
@@ -106,3 +108,41 @@ class ActivitiesMixin:
         else:
             raise ValueError(f"Unsupported format: {fmt!r} (use 'fit' or 'tcx')")
         return self.download(path)
+
+    def download_activity_to_dir(
+        self,
+        activity: dict[str, Any],
+        out_dir: str | Path,
+        fmt: str = "fit",
+    ) -> list[Path]:
+        """Download one activity and write it under ``out_dir``.
+
+        The base filename is ``{date}_{activityId}_{safe-name}``. For
+        ``fmt="fit"`` the downloaded ZIP archive is expanded into its ``.fit``
+        member(s) (see :func:`garmin._fit.write_fit_download`); ``fmt="tcx"``
+        is written as a single ``.tcx`` file.
+
+        Args:
+            activity: A raw Garmin activity dict (uses ``activityId``,
+                ``activityName`` and ``startTimeLocal``).
+            out_dir: Destination directory (created if missing).
+            fmt: Download format, either ``"fit"`` or ``"tcx"``.
+
+        Returns:
+            The list of file paths written.
+        """
+        activity_id = activity.get("activityId")
+        name = activity.get("activityName") or "activity"
+        start_time = activity.get("startTimeLocal", "")
+        date_str = start_time[:10] if start_time else "nodate"
+
+        out_dir = Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        base_path = out_dir / f"{date_str}_{activity_id}_{safe_filename(name)}"
+
+        content = self.download_activity(activity_id, fmt=fmt)
+        if fmt.lower() == "fit":
+            return write_fit_download(content, base_path)
+        out = base_path.with_suffix(f".{fmt.lower()}")
+        out.write_bytes(content)
+        return [out]
