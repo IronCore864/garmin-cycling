@@ -7,7 +7,7 @@ from datetime import date
 
 from garmin.workflow import DEFAULT_VO2MAX_IMAGE
 
-from .commands import run_download, run_gear, run_laps, run_sync
+from .commands import run_analyze, run_download, run_gear, run_laps, run_sync
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -94,5 +94,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional activity type filter (e.g. cycling, running).",
     )
     download_parser.set_defaults(func=run_download)
+
+    analyze_parser = subparsers.add_parser(
+        "analyze",
+        help="Analyze a single local FIT file: aerobic decoupling, critical "
+        "power / W', and coasting (offline, no network).",
+    )
+    analyze_parser.add_argument(
+        "--file", required=True, help="Path to a local .fit file to analyze."
+    )
+    analyze_parser.add_argument(
+        "--weight",
+        type=float,
+        default=None,
+        help="Rider weight in kg (enables W/kg and a weight-aware phenotype).",
+    )
+    analyze_parser.set_defaults(func=run_analyze)
 
     return parser

@@ -30,6 +30,18 @@ from .laps import (
     count_fit_laps,
     count_laps_in_directory,
 )
+from .power import (
+    Coasting,
+    CriticalPower,
+    Decoupling,
+    RideAnalysis,
+    analyze_ride,
+    compute_coasting,
+    compute_critical_power,
+    compute_decoupling,
+    mean_max_power,
+    normalized_power,
+)
 from .workflow import run_workflow
 
 __all__ = [
@@ -53,6 +65,17 @@ __all__ = [
     "count_circles",
     "count_fit_laps",
     "count_laps_in_directory",
+    # Single-ride power analysis
+    "RideAnalysis",
+    "Decoupling",
+    "CriticalPower",
+    "Coasting",
+    "analyze_ride",
+    "normalized_power",
+    "mean_max_power",
+    "compute_critical_power",
+    "compute_decoupling",
+    "compute_coasting",
     # Workflow
     "run_workflow",
 ]

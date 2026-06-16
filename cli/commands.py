@@ -14,11 +14,13 @@ from pathlib import Path
 
 from garmin import load_config, make_cn_client
 from garmin.laps import count_laps_in_directory
+from garmin.power import analyze_ride
 from garmin.workflow import run_workflow
 
 from .reporting import (
     format_gear_report,
     format_lap_report,
+    format_ride_analysis,
     format_workflow_summary,
 )
 
@@ -118,3 +120,20 @@ def run_download(args: argparse.Namespace) -> None:
         print(f"{len(failures)} activity(ies) failed:")
         for aid, err in failures:
             print(f"  - {aid}: {err}")
+
+
+def run_analyze(args: argparse.Namespace) -> None:
+    import fitparse
+
+    path = Path(args.file)
+    if not path.is_file():
+        print(f"File not found: {path}")
+        return
+    try:
+        fitfile = fitparse.FitFile(str(path))
+    except Exception as exc:  # noqa: BLE001 -- report unreadable/corrupt files
+        print(f"Could not read FIT file '{path}': {exc}")
+        return
+
+    analysis = analyze_ride(fitfile, weight_kg=args.weight)
+    print(format_ride_analysis(path.name, analysis))

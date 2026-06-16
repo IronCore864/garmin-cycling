@@ -1,7 +1,7 @@
 """The composed Garmin Connect client and login factory helpers.
 
 ``GarminClient`` combines all endpoint/feature groups (activities, gear,
-VO2 max, analytics, laps, sync) on top of the authentication/transport
+VO2 max, analytics, power, laps, sync) on top of the authentication/transport
 layer in :mod:`garmin._base`.
 """
 
@@ -13,6 +13,7 @@ from .analytics import AnalyticsMixin
 from .config import Config
 from .gear import GearMixin
 from .laps import LapsMixin
+from .power import PowerMixin
 from .sync import SyncMixin
 from .vo2 import VO2Mixin
 
@@ -23,6 +24,7 @@ class GarminClient(
     GearMixin,
     VO2Mixin,
     AnalyticsMixin,
+    PowerMixin,
     LapsMixin,
     SyncMixin,
 ):
