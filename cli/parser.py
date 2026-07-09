@@ -7,7 +7,15 @@ from datetime import date
 
 from garmin.workflow import DEFAULT_VO2MAX_IMAGE
 
-from .commands import run_analyze, run_download, run_gear, run_laps, run_sync
+from .commands import (
+    run_analyze,
+    run_download,
+    run_gear,
+    run_laps,
+    run_readiness,
+    run_sync,
+    run_zones,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -94,6 +102,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional activity type filter (e.g. cycling, running).",
     )
     download_parser.set_defaults(func=run_download)
+
+    readiness_parser = subparsers.add_parser(
+        "readiness",
+        help="HR-based training load & readiness (train vs rest) for today.",
+    )
+    readiness_parser.add_argument(
+        "--resting-hr", type=int, default=None, help="Override resting HR (bpm)."
+    )
+    readiness_parser.add_argument(
+        "--max-hr", type=int, default=None, help="Override max HR (bpm)."
+    )
+    readiness_parser.add_argument(
+        "--sex", choices=["male", "female"], default=None, help="Override sex."
+    )
+    readiness_parser.add_argument(
+        "--age", type=int, default=None, help="Age (used to estimate max HR)."
+    )
+    readiness_parser.set_defaults(func=run_readiness)
+
+    zones_parser = subparsers.add_parser(
+        "zones",
+        help="Show FTHR-based heart-rate training zones.",
+    )
+    zones_parser.add_argument(
+        "--fthr",
+        type=float,
+        required=True,
+        help="Functional Threshold Heart Rate (bpm).",
+    )
+    zones_parser.set_defaults(func=run_zones)
 
     analyze_parser = subparsers.add_parser(
         "analyze",

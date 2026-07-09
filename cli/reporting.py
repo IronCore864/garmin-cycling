@@ -14,6 +14,7 @@ from datetime import date
 from garmin.gear import GearReport
 from garmin.laps import LapResult
 from garmin.power import RideAnalysis
+from garmin.training_load import ReadinessReport
 
 _STATUS_ICON = {
     "synced": "✓",
@@ -274,6 +275,59 @@ def format_ride_analysis(filename: str, analysis: RideAnalysis) -> str:
             f"Coasting: {co.coasting_s / 60:.1f} min ({co.coasting_pct:.1f}%)"
         )
         lines.append(f"  Longest coast: {co.longest_coast_s:.0f} s")
+
+    lines.append("")
+    lines.append("=" * 60)
+    return "\n".join(lines)
+
+
+def format_readiness_report(report: ReadinessReport) -> str:
+    """Render a :class:`garmin.training_load.ReadinessReport` as text."""
+    lines: list[str] = []
+    lines.append("=" * 60)
+    lines.append("Training Load & Readiness")
+    lines.append("=" * 60)
+    source_label = {
+        "local": "local downloads",
+        "online": "Garmin CN (online)",
+    }.get(report.source, report.source)
+    lines.append(
+        f"Window: {report.start} to {report.end}  "
+        f"({report.scanned} activities, source: {source_label})"
+    )
+
+    if report.latest is None or report.recommendation is None:
+        lines.append("")
+        lines.append("No usable data in range.")
+        lines.append("=" * 60)
+        return "\n".join(lines)
+
+    # Recent daily trend (last 14 days of the series).
+    lines.append("")
+    lines.append("Recent trend (Fitness/Fatigue/Form + ACWR):")
+    lines.append(
+        f"  {'Date':>10s}  {'Load':>5s}  {'Fit':>5s}  {'Fatig':>5s}  "
+        f"{'Form':>5s}  {'ACWR':>5s}"
+    )
+    for m in report.days[-14:]:
+        acwr_str = f"{m.acwr:.2f}" if m.acwr is not None else "  -"
+        lines.append(
+            f"  {m.day.isoformat():>10s}  {m.load:>5d}  {m.ctl:>5.0f}  "
+            f"{m.atl:>5.0f}  {m.tsb:>5.0f}  {acwr_str:>5s}"
+        )
+
+    latest = report.latest
+    rec = report.recommendation
+    acwr_str = f"{latest.acwr:.2f}" if latest.acwr is not None else "n/a"
+    lines.append("")
+    lines.append(f"As of {latest.day.isoformat()}:")
+    lines.append(
+        f"  Fitness (CTL): {latest.ctl:.0f}   Fatigue (ATL): {latest.atl:.0f}   "
+        f"Form (TSB): {latest.tsb:.0f}   ACWR: {acwr_str}"
+    )
+    flag = "  [CAUTION: load spiking]" if rec.caution else ""
+    lines.append(f"  Recommendation: {rec.recommendation.upper()}{flag}")
+    lines.append(f"  {rec.rationale}")
 
     lines.append("")
     lines.append("=" * 60)
