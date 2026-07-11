@@ -68,9 +68,14 @@ variables. Environment variables take precedence.
 | `GARMIN_CN_PASSWORD`     | Garmin CN password                   |
 | `GARMIN_GLOBAL_EMAIL`    | Garmin Global email (sync only)      |
 | `GARMIN_GLOBAL_PASSWORD` | Garmin Global password (sync only)   |
+| `GARMIN_RESTING_HR`      | Resting HR in bpm (`readiness` load) |
+| `GARMIN_MAX_HR`          | Max HR in bpm (`readiness` load)     |
+| `GARMIN_SEX`             | `male` or `female` (TRIMP weighting) |
+| `GARMIN_AGE`             | Age; used to estimate max HR if unset|
 
 The legacy `env` keys `username` / `password` are still accepted as aliases
-for the Garmin CN account.
+for the Garmin CN account. The HR keys are only needed for the `readiness`
+command (heart-rate training load); they can also be passed as CLI overrides.
 
 Example `env`:
 
@@ -99,6 +104,9 @@ uv run python main.py laps             # lake laps from ./downloads (year to dat
 uv run python main.py laps --year 2025
 uv run python main.py laps --month 5 --dir downloads
 uv run python main.py download --start 2026-04-22 --end 2026-06-12 --format fit
+uv run python main.py readiness        # today's HR training load & train/rest advice
+uv run python main.py readiness --max-hr 190 --resting-hr 48
+uv run python main.py zones --fthr 165 # FTHR-based heart-rate training zones
 uv run python main.py analyze --file downloads/2026-05-01_123_Ride.fit
 uv run python main.py analyze --file downloads/2026-05-01_123_Ride.fit --weight 70
 ```

@@ -21,7 +21,13 @@ as methods on a client instance (e.g. ``client.count_latest_activity_laps()``).
 
 from .analytics import max_avg_pwr_and_hr
 from .client import GarminClient, make_cn_client, make_global_client
-from .config import Config, Credentials, load_config
+from .config import (
+    AthleteProfile,
+    Config,
+    Credentials,
+    load_athlete_profile,
+    load_config,
+)
 from .gear import GearActivity, GearReport
 from .laps import (
     DEFAULT_LAKE,
@@ -43,7 +49,20 @@ from .power import (
     mean_max_power,
     normalized_power,
 )
+from .training_load import (
+    DayLoad,
+    ReadinessMetrics,
+    ReadinessReport,
+    Recommendation,
+    activity_load,
+    acwr,
+    analyze_readiness,
+    has_todays_activity,
+    recommend,
+    rolling_metrics,
+)
 from .workflow import run_workflow
+from .zones import calculate_zones, format_zones
 
 __all__ = [
     # Client + factories
@@ -54,6 +73,8 @@ __all__ = [
     "Config",
     "Credentials",
     "load_config",
+    "AthleteProfile",
+    "load_athlete_profile",
     # Analytics
     "max_avg_pwr_and_hr",
     # Gear
@@ -79,4 +100,18 @@ __all__ = [
     "compute_coasting",
     # Workflow
     "run_workflow",
+    # Training load & readiness
+    "DayLoad",
+    "Recommendation",
+    "ReadinessMetrics",
+    "ReadinessReport",
+    "activity_load",
+    "acwr",
+    "analyze_readiness",
+    "has_todays_activity",
+    "recommend",
+    "rolling_metrics",
+    # Heart-rate zones
+    "calculate_zones",
+    "format_zones",
 ]

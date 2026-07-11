@@ -9,17 +9,21 @@ from __future__ import annotations
 
 import argparse
 import calendar
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
-from garmin import load_config, make_cn_client
+from garmin import calculate_zones, format_zones, load_config, make_cn_client
+from garmin.config import load_athlete_profile
 from garmin.laps import count_laps_in_directory
 from garmin.power import analyze_ride
+from garmin.training_load import analyze_readiness
 from garmin.workflow import run_workflow
 
 from .reporting import (
     format_gear_report,
     format_lap_report,
+    format_readiness_report,
     format_ride_analysis,
     format_workflow_summary,
 )
@@ -120,6 +124,47 @@ def run_download(args: argparse.Namespace) -> None:
         print(f"{len(failures)} activity(ies) failed:")
         for aid, err in failures:
             print(f"  - {aid}: {err}")
+
+
+def run_readiness(args: argparse.Namespace) -> None:
+    profile = load_athlete_profile()
+    # Apply CLI overrides (only when provided) on top of configured values.
+    overrides = {
+        k: v
+        for k, v in (
+            ("resting_hr", args.resting_hr),
+            ("max_hr", args.max_hr),
+            ("sex", args.sex),
+            ("age", args.age),
+        )
+        if v is not None
+    }
+    if overrides:
+        profile = replace(profile, **overrides)
+
+    def _client_factory():
+        return make_cn_client(load_config())
+
+    try:
+        report = analyze_readiness(profile, client_factory=_client_factory)
+    except RuntimeError as exc:
+        print(f"Cannot assess readiness: {exc}")
+        return
+
+    if report.scanned == 0:
+        print("No recent activities found to assess readiness.")
+        return
+    print(format_readiness_report(report))
+
+
+def run_zones(args: argparse.Namespace) -> None:
+    try:
+        zones = calculate_zones(args.fthr)
+    except TypeError as exc:
+        print(str(exc))
+        return
+    print(f"Heart-rate zones for FTHR {args.fthr:.0f} bpm:")
+    print(format_zones(zones))
 
 
 def run_analyze(args: argparse.Namespace) -> None:
