@@ -21,6 +21,7 @@ from garmin.training_load import analyze_readiness
 from garmin.workflow import run_workflow
 
 from .reporting import (
+    format_badge_summary,
     format_gear_report,
     format_lap_report,
     format_readiness_report,
@@ -202,3 +203,27 @@ def run_weight(args: argparse.Namespace) -> None:
         f"-> {last['Date']}: {last['Weight']:.1f} kg)."
     )
     print(f"Saved weight graph to '{out}'.")
+
+
+def run_badges(args: argparse.Namespace) -> None:
+    client = make_cn_client(load_config())
+
+    print("Fetching earned badges...")
+    badges = client.get_earned_badges()
+    if not badges:
+        print("No earned badges found.")
+        return
+
+    print(f"Found {len(badges)} badges. Downloading artwork and building poster...")
+    out = client.plot_badges(
+        args.out,
+        style=args.style,
+        sort_by=args.sort,
+        columns=args.columns,
+        res=args.res,
+    )
+    print("\n" + format_badge_summary(badges))
+    if out:
+        print(f"\nSaved badges poster to '{out}'.")
+    else:
+        print("\nCould not render the badges poster.")

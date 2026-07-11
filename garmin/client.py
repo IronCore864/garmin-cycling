@@ -10,6 +10,7 @@ from __future__ import annotations
 from ._base import BaseClient
 from .activities import ActivitiesMixin
 from .analytics import AnalyticsMixin
+from .badges import BadgesMixin
 from .config import Config
 from .gear import GearMixin
 from .laps import LapsMixin
@@ -29,6 +30,7 @@ class GarminClient(
     LapsMixin,
     SyncMixin,
     WeightMixin,
+    BadgesMixin,
 ):
     """Garmin Connect API client.
 

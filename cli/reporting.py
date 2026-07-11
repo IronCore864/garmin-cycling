@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from garmin.badges import compute_badge_stats, sort_badges
 from garmin.gear import GearReport
 from garmin.laps import LapResult
 from garmin.power import RideAnalysis
@@ -330,5 +331,40 @@ def format_readiness_report(report: ReadinessReport) -> str:
     lines.append(f"  {rec.rationale}")
 
     lines.append("")
+    lines.append("=" * 60)
+    return "\n".join(lines)
+
+
+def format_badge_summary(badges: list[dict]) -> str:
+    """Render a text summary of earned badges."""
+    stats = compute_badge_stats(badges)
+    lines: list[str] = []
+    lines.append("=" * 60)
+    lines.append("Garmin Badges - Summary")
+    lines.append("=" * 60)
+    lines.append(f"Total earned : {stats.total_badges} (counting repeats)")
+    lines.append(f"Unique       : {stats.unique_badges}")
+    lines.append(f"Total points : {stats.total_points}")
+    lines.append(f"Earned span  : {stats.date_span}")
+
+    top = sort_badges(badges, by="points")[:5]
+    if top:
+        lines.append("")
+        lines.append("Highest-value badges:")
+        for b in top:
+            name = b.get("badgeName") or "Unnamed badge"
+            pts = int(b.get("badgePoints") or 0)
+            lines.append(f"  {pts:>3d} pts  {name}")
+
+    repeated = [b for b in badges if int(b.get("badgeEarnedNumber") or 1) > 1]
+    repeated.sort(key=lambda b: int(b.get("badgeEarnedNumber") or 1), reverse=True)
+    if repeated:
+        lines.append("")
+        lines.append("Most-repeated badges:")
+        for b in repeated[:5]:
+            name = b.get("badgeName") or "Unnamed badge"
+            times = int(b.get("badgeEarnedNumber") or 1)
+            lines.append(f"  x{times:<3d}  {name}")
+
     lines.append("=" * 60)
     return "\n".join(lines)

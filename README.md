@@ -32,6 +32,7 @@ garmin/
 ├── power.py        # single-FIT analysis: decoupling/EF, critical power/W′, coasting
 ├── gear.py         # GearMixin + GearActivity/GearReport (rides grouped by bike)
 ├── vo2.py          # VO2Mixin + cycling VO2max plotting
+├── badges.py       # BadgesMixin + earned-badge poster rendering
 ├── laps.py         # Lake value object + lake lap (circle) counting from GPS
 ├── sync.py         # CN -> Global activity sync
 ├── config.py       # credential configuration
@@ -109,6 +110,8 @@ uv run python main.py readiness --max-hr 190 --resting-hr 48
 uv run python main.py zones --fthr 165 # FTHR-based heart-rate training zones
 uv run python main.py analyze --file downloads/2026-05-01_123_Ride.fit
 uv run python main.py analyze --file downloads/2026-05-01_123_Ride.fit --weight 70
+uv run python main.py badges            # poster of all earned Garmin badges
+uv run python main.py badges --sort date --columns 20 --out my_badges.png
 ```
 
 ## Single-file ride analysis (`analyze`)
@@ -152,6 +155,46 @@ Coasting / pedaling:
   Pedaling: 60.9 min (89.4%)   Coasting: 7.2 min (10.6%)
   Longest coast: 95 s
 ============================================================
+```
+
+## Badges poster (`badges`)
+
+`badges` fetches every badge you've earned on Garmin Connect and renders a
+single poster image showing them all off. It downloads the official badge
+artwork (cached under `~/.cache/garmin-cycling/badges`) and lays it out in a
+grid over a dark gradient, with a header summarising your totals:
+
+```
+============================================================
+Garmin Badges - Summary
+============================================================
+Total earned : 307 (counting repeats)
+Unique       : 304
+Total points : 490
+Earned span  : 2020-10-31 -> 2026-07-06
+
+Highest-value badges:
+    8 pts  100-Mile Ride
+    8 pts  Intense 300
+    ...
+============================================================
+```
+
+Repeatable badges earned more than once get an `xN` chip in the corner. Sort
+the grid by `points` (default), `date`, or `category`, and tweak `--columns`
+and `--res` (`mdpi`/`hdpi`/`xhdpi`/`xxhdpi`, default highest) as desired.
+
+Two poster styles are available via `--style`:
+
+- `grid` (default) — every badge at a uniform size in a tidy grid.
+- `color` — badges arranged by their dominant colour along a bicycle
+  outline (two wheels + frame, a single badge thick), so the machine sweeps
+  across the spectrum from front to back.
+
+```bash
+uv run python main.py badges
+uv run python main.py badges --style color --out badges_bike.png
+uv run python main.py badges --sort date --columns 20 --out my_badges.png
 ```
 
 ## Run the sync API

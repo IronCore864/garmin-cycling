@@ -9,6 +9,7 @@ from garmin.workflow import DEFAULT_VO2MAX_IMAGE
 
 from .commands import (
     run_analyze,
+    run_badges,
     run_download,
     run_gear,
     run_laps,
@@ -166,5 +167,39 @@ def build_parser() -> argparse.ArgumentParser:
         "--out", default="weight.png", help="Output path for the weight image."
     )
     weight_parser.set_defaults(func=run_weight)
+
+    badges_parser = subparsers.add_parser(
+        "badges",
+        help="Fetch earned Garmin badges and render a show-off poster image.",
+    )
+    badges_parser.add_argument(
+        "--out", default="badges.png", help="Output path for the badges poster."
+    )
+    badges_parser.add_argument(
+        "--style",
+        choices=["grid", "color"],
+        default="grid",
+        help="Poster style: uniform grid, or a colour-sorted bicycle shape "
+        "(default: grid).",
+    )
+    badges_parser.add_argument(
+        "--sort",
+        choices=["points", "date", "category"],
+        default="points",
+        help="Badge ordering in the grid (default: points).",
+    )
+    badges_parser.add_argument(
+        "--columns",
+        type=int,
+        default=16,
+        help="Number of badges per row (default: 16).",
+    )
+    badges_parser.add_argument(
+        "--res",
+        choices=["mdpi", "hdpi", "xhdpi", "xxhdpi"],
+        default="xxhdpi",
+        help="Badge artwork resolution (default: xxhdpi, highest).",
+    )
+    badges_parser.set_defaults(func=run_badges)
 
     return parser
