@@ -11,6 +11,7 @@ as methods on a client instance (e.g. ``client.count_latest_activity_laps()``).
   - ``activities``: activity listing and download
   - ``gear``      : gear (bike) endpoints and stats
   - ``vo2``       : VO2 max retrieval and monthly plotting
+  - ``weight``    : body-weight retrieval and history plotting
   - ``analytics`` : power/HR analytics (max avg power by duration)
   - ``laps``      : lake lap (circle) counting
   - ``sync``      : CN -> Global activity sync

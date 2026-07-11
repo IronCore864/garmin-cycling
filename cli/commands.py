@@ -137,3 +137,23 @@ def run_analyze(args: argparse.Namespace) -> None:
 
     analysis = analyze_ride(fitfile, weight_kg=args.weight)
     print(format_ride_analysis(path.name, analysis))
+
+
+def run_weight(args: argparse.Namespace) -> None:
+    client = make_cn_client(load_config())
+    start, end = args.start, args.end
+
+    print(f"Fetching weight data {start} to {end}...")
+    records = client.get_weight_range(start, end)
+    if not records:
+        print("No weight data found in the given date range.")
+        return
+
+    out = client.plot_weight(args.out, start, end)
+    first, last = records[0], records[-1]
+    print(
+        f"Found {len(records)} weigh-ins "
+        f"({first['Date']}: {first['Weight']:.1f} kg "
+        f"-> {last['Date']}: {last['Weight']:.1f} kg)."
+    )
+    print(f"Saved weight graph to '{out}'.")

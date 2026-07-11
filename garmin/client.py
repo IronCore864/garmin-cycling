@@ -16,6 +16,7 @@ from .laps import LapsMixin
 from .power import PowerMixin
 from .sync import SyncMixin
 from .vo2 import VO2Mixin
+from .weight import WeightMixin
 
 
 class GarminClient(
@@ -27,6 +28,7 @@ class GarminClient(
     PowerMixin,
     LapsMixin,
     SyncMixin,
+    WeightMixin,
 ):
     """Garmin Connect API client.
 

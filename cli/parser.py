@@ -7,7 +7,14 @@ from datetime import date
 
 from garmin.workflow import DEFAULT_VO2MAX_IMAGE
 
-from .commands import run_analyze, run_download, run_gear, run_laps, run_sync
+from .commands import (
+    run_analyze,
+    run_download,
+    run_gear,
+    run_laps,
+    run_sync,
+    run_weight,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -110,5 +117,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Rider weight in kg (enables W/kg and a weight-aware phenotype).",
     )
     analyze_parser.set_defaults(func=run_analyze)
+
+    weight_parser = subparsers.add_parser(
+        "weight",
+        help="Fetch body-weight history from Garmin CN and plot it.",
+    )
+    weight_parser.add_argument(
+        "--start", default="2022-07-01", help="Start date YYYY-MM-DD (inclusive)."
+    )
+    weight_parser.add_argument(
+        "--end",
+        default=date.today().isoformat(),
+        help="End date YYYY-MM-DD (inclusive, default: today).",
+    )
+    weight_parser.add_argument(
+        "--out", default="weight.png", help="Output path for the weight image."
+    )
+    weight_parser.set_defaults(func=run_weight)
 
     return parser
