@@ -25,9 +25,15 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
+from .geo import haversine_m, resolve_city_center
+
 logger = logging.getLogger("garmin")
 
 _SEMI_TO_DEG = 180.0 / (2**31)
+
+# Default radius around a city centre within which an activity's *start* point
+# is considered to belong to that city (matches laps.py's start-distance test).
+_DEFAULT_CITY_RADIUS_KM = 100.0
 
 # On-disk cache of parsed tracks so repeat runs skip re-parsing FIT files.
 _CACHE_FILENAME = ".heatmap_cache.json"
@@ -187,19 +193,40 @@ def filter_tracks(
     tracks: list[GpsTrack],
     year: int | None = None,
     city: str | None = None,
+    center: tuple[float, float] | None = None,
+    radius_km: float = _DEFAULT_CITY_RADIUS_KM,
 ) -> list[GpsTrack]:
-    """Keep tracks matching an optional ``year`` and/or ``city``.
+    """Keep tracks matching an optional ``year`` and/or city.
 
-    City matching is a case-insensitive substring test against the location
-    name *and* its pinyin, so ``"chengdu"`` matches both ``"Chengdu"`` and
-    ``"成都市"``.
+    City matching works two ways:
+
+    * **Geographic** (preferred): when ``center`` is a ``(lat, lon)`` pair, a
+      track is kept if its *start* point lies within ``radius_km`` of that
+      centre. This catches rides whose location words never mention the city
+      (e.g. a Chengdu ride labelled ``天府大道``).
+    * **Name** (fallback): when ``center`` is ``None`` but ``city`` is given, a
+      case-insensitive substring test is run against the location name *and*
+      its pinyin, so ``"chengdu"`` matches both ``"Chengdu"`` and ``"成都市"``.
     """
-    needle = city.lower().replace(" ", "") if city is not None else None
+    needle = (
+        city.lower().replace(" ", "")
+        if city is not None and center is None
+        else None
+    )
+    radius_m = radius_km * 1000.0
     result = []
     for track in tracks:
         if year is not None and not track.date.startswith(str(year)):
             continue
-        if needle is not None and needle not in _location_match_key(track.location):
+        if center is not None:
+            if not track.points:
+                continue
+            start_lat, start_lon = track.points[0]
+            if haversine_m(start_lat, start_lon, center[0], center[1]) > radius_m:
+                continue
+        elif needle is not None and needle not in _location_match_key(
+            track.location
+        ):
             continue
         result.append(track)
     return result
@@ -210,6 +237,8 @@ def load_tracks(
     year: int | None = None,
     city: str | None = None,
     max_points: int = 500,
+    radius_km: float = _DEFAULT_CITY_RADIUS_KM,
+    allow_geocode: bool = True,
     on_progress: Callable[[int, int], None] | None = None,
     use_cache: bool = True,
 ) -> list[GpsTrack]:
@@ -223,10 +252,17 @@ def load_tracks(
         directory: Folder of ``*.fit`` files (the ``download`` output).
         year: Optional year filter (matched against the filename date prefix,
             so files are skipped before parsing).
-        city: Optional location filter (case-insensitive substring).
+        city: Optional city filter. Resolved to a ``(lat, lon)`` centre; any
+            activity whose GPS track *starts* within ``radius_km`` of it is
+            kept. Falls back to a case-insensitive name/pinyin substring match
+            when the city centre cannot be resolved.
         max_points: Per-track display cap. Tracks are cached at a fixed high
             fidelity and decimated to this value in-memory, so changing it is
             instant (no re-parse). Lower values suit wide-area maps.
+        radius_km: Radius around the resolved city centre for the geographic
+            filter (default 100 km).
+        allow_geocode: Allow online geocoding when the city is not in the
+            built-in registry or on-disk cache. Set ``False`` to stay offline.
         on_progress: Optional callback invoked as ``(done, total)`` as files
             are resolved (from cache or freshly parsed).
         use_cache: Read/write the on-disk parse cache (``.heatmap_cache.json``
@@ -310,7 +346,23 @@ def load_tracks(
             )
         )
     if city is not None:
-        tracks = filter_tracks(tracks, city=city)
+        center = resolve_city_center(city, allow_network=allow_geocode)
+        if center is not None:
+            logger.info(
+                "Filtering by start point within %.0f km of %s (%.4f, %.4f).",
+                radius_km,
+                city,
+                center[0],
+                center[1],
+            )
+            tracks = filter_tracks(tracks, center=center, radius_km=radius_km)
+        else:
+            logger.info(
+                "Could not resolve a centre for %r; falling back to a "
+                "name-based match.",
+                city,
+            )
+            tracks = filter_tracks(tracks, city=city)
     return tracks
 
 

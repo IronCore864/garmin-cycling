@@ -125,6 +125,47 @@ def test_filter_tracks_by_chinese_query_matches_chinese_location():
     assert [t.location for t in kept] == ["成都市 公路骑行"]
 
 
+# --- geographic filtering --------------------------------------------------
+
+
+def _geo_track(location, start):
+    """A track whose first point is ``start`` (lat, lon)."""
+    return GpsTrack(date="2026-01-01", name=location, location=location, points=[start])
+
+
+def test_filter_tracks_by_center_keeps_starts_within_radius():
+    chengdu = (30.5728, 104.0668)
+    tracks = [
+        # Labelled as a street, but starts in Chengdu -> kept geographically.
+        _geo_track("天府大道", (30.60, 104.10)),
+        # A landmark inside the metro area -> kept.
+        _geo_track("龙泉山", (30.55, 104.30)),
+        # Munich -> far away -> dropped.
+        _geo_track("Munich", (48.1351, 11.5820)),
+    ]
+    kept = filter_tracks(tracks, center=chengdu, radius_km=100.0)
+    assert [t.location for t in kept] == ["天府大道", "龙泉山"]
+
+
+def test_filter_tracks_by_center_ignores_name_and_respects_radius():
+    chengdu = (30.5728, 104.0668)
+    tracks = [_geo_track("Chengdu", (31.9, 104.0))]  # ~150 km north
+    assert filter_tracks(tracks, center=chengdu, radius_km=100.0) == []
+    assert len(filter_tracks(tracks, center=chengdu, radius_km=200.0)) == 1
+
+
+def test_filter_tracks_center_combines_with_year():
+    chengdu = (30.5728, 104.0668)
+    near = GpsTrack(
+        date="2025-01-01", name="x", location="x", points=[(30.6, 104.1)]
+    )
+    other_year = GpsTrack(
+        date="2026-01-01", name="y", location="y", points=[(30.6, 104.1)]
+    )
+    kept = filter_tracks(tracks=[near, other_year], year=2026, center=chengdu)
+    assert [t.date for t in kept] == ["2026-01-01"]
+
+
 def test_summarize_locations_counts_most_common_first():
     tracks = [
         _track("2026-01-01", "Chengdu"),

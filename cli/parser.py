@@ -10,6 +10,7 @@ from garmin.workflow import DEFAULT_VO2MAX_IMAGE
 from .commands import (
     run_analyze,
     run_badges,
+    run_distance,
     run_download,
     run_gear,
     run_heatmap,
@@ -102,9 +103,24 @@ def build_parser() -> argparse.ArgumentParser:
     heatmap_parser.add_argument(
         "--city",
         default=None,
-        help="Only include activities whose location matches this name "
-        "(case-insensitive; matches English/pinyin or Chinese, e.g. "
-        "'chengdu' also matches '成都市').",
+        help="Only include activities that start near this city. The city is "
+        "resolved to a centre (built-in list or online lookup) and any ride "
+        "starting within --radius km is kept, so rides labelled with a street "
+        "or landmark (e.g. '天府大道', '龙泉山') still count. Accepts "
+        "English/pinyin or Chinese (e.g. 'chengdu' or '成都'). Falls back to a "
+        "name match if the centre cannot be resolved.",
+    )
+    heatmap_parser.add_argument(
+        "--radius",
+        type=float,
+        default=100.0,
+        help="Radius in km around the city centre for --city (default 100).",
+    )
+    heatmap_parser.add_argument(
+        "--no-geocode",
+        action="store_true",
+        help="Never look a city up online; use only the built-in city list "
+        "and cached results (offline).",
     )
     heatmap_parser.add_argument(
         "--max-points",
@@ -120,6 +136,53 @@ def build_parser() -> argparse.ArgumentParser:
         help="Ignore the on-disk parse cache and re-parse every FIT file.",
     )
     heatmap_parser.set_defaults(func=run_heatmap)
+
+    distance_parser = subparsers.add_parser(
+        "distance",
+        help="Total ridden distance from local FIT files, optionally for one "
+        "city (rides starting within --radius km of its centre).",
+    )
+    distance_parser.add_argument(
+        "--dir", default="downloads", help="Directory containing FIT files."
+    )
+    distance_parser.add_argument(
+        "--city",
+        default=None,
+        help="Only count activities that start near this city (English/pinyin "
+        "or Chinese, e.g. 'chengdu' or '成都'). Resolved to a centre; rides "
+        "starting within --radius km are counted. Omit to count all files.",
+    )
+    distance_parser.add_argument(
+        "--radius",
+        type=float,
+        default=100.0,
+        help="Radius in km around the city centre for --city (default 100).",
+    )
+    distance_parser.add_argument(
+        "--year",
+        type=int,
+        default=None,
+        help="Only count activities from this year (default: all data).",
+    )
+    distance_parser.add_argument(
+        "--no-geocode",
+        action="store_true",
+        help="Never look a city up online; use only the built-in city list "
+        "and cached results (offline).",
+    )
+    distance_parser.add_argument(
+        "--type",
+        default="cycling",
+        help="Activity type to total over the API (default: cycling). Pass an "
+        "empty string to count all types. Ignored with --local.",
+    )
+    distance_parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Compute from local FIT files in --dir (offline, parses files in "
+        "parallel) instead of the Garmin API.",
+    )
+    distance_parser.set_defaults(func=run_distance)
 
     download_parser = subparsers.add_parser(
         "download", help="Download activities in a date range as FIT or TCX."

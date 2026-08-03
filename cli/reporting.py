@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import date
 
 from garmin.badges import compute_badge_stats, sort_badges
+from garmin.distance import DistanceReport
 from garmin.gear import GearReport
 from garmin.heatmap import GpsTrack, summarize_locations
 from garmin.laps import LapResult
@@ -199,6 +200,45 @@ def format_heatmap_summary(tracks: list[GpsTrack], out_path) -> str:
         lines.append(f"  {location:<24s} {count:>4d}")
     lines.append("")
     lines.append(f"Saved to '{out_path}'. Open it in a browser.")
+    return "\n".join(lines)
+
+
+def format_distance_report(
+    report: DistanceReport,
+    *,
+    city: str | None = None,
+    year: int | None = None,
+    radius_km: float | None = None,
+    geo_filtered: bool = True,
+) -> str:
+    """Render a :class:`garmin.distance.DistanceReport` as text.
+
+    ``geo_filtered`` distinguishes "counted rides starting near <city>" from
+    the fallback where the city centre could not be resolved (no rides match).
+    """
+    where_parts: list[str] = []
+    if city:
+        if geo_filtered and radius_km is not None:
+            where_parts.append(f"within {radius_km:.0f} km of {city}")
+        else:
+            where_parts.append(f"near {city}")
+    if year is not None:
+        where_parts.append(f"in {year}")
+    where = (" " + " ".join(where_parts)) if where_parts else ""
+
+    lines: list[str] = []
+    lines.append(f"Scanned {report.scanned} FIT files.")
+    if city and not geo_filtered:
+        lines.append(
+            f"Could not resolve a centre for '{city}'; distance shown is 0."
+        )
+    lines.append(
+        f"Distance{where}: {report.total_km:,.1f} km "
+        f"across {report.activities} activities."
+    )
+    if report.activities:
+        avg = report.total_km / report.activities
+        lines.append(f"Average ride: {avg:,.1f} km.")
     return "\n".join(lines)
 
 

@@ -12,7 +12,11 @@ Garmin Connect utilities focused on cycling. It provides a reusable
     date range.
   - `laps`: count lake laps (circles) from downloaded FIT files in a date range.
   - `heatmap`: render a Strava-style route heatmap (HTML) from local FIT
-    files, for all data, a given `--year`, or a single `--city`.
+    files, for all data, a given `--year`, or a single `--city` (matched
+    geographically — see below).
+  - `distance`: total ridden distance, optionally for one city (rides that
+    *start* within a radius of the city centre). Uses the Garmin API by
+    default (fast); `--local` totals local FIT files instead.
   - `download`: bulk-download activities in a date range as FIT/TCX,
     skipping any already present in the output directory (use `--force` to
     re-download).
@@ -114,10 +118,15 @@ uv run python main.py laps --month 5 --dir downloads
 uv run python main.py heatmap          # route heatmap of all local FIT files
 uv run python main.py heatmap --year 2026
 uv run python main.py heatmap --city Chengdu             # -> chengdu.html
+uv run python main.py heatmap --city 成都 --radius 80    # rides starting <=80km from Chengdu
 uv run python main.py heatmap --city Chengdu --year 2026 # -> chengdu_2026.html
 uv run python main.py download --start 2026-04-22 --end 2026-06-12 --format fit
 uv run python main.py download --all    # skips activities already in ./downloads
 uv run python main.py download --all --force  # re-download everything
+uv run python main.py distance                 # total distance (all activities, via API)
+uv run python main.py distance --city Chengdu  # km starting <=100km from Chengdu
+uv run python main.py distance --city 成都 --year 2026 --radius 80
+uv run python main.py distance --local         # total from local FIT files (offline)
 uv run python main.py readiness        # today's HR training load & train/rest advice
 uv run python main.py readiness --max-hr 190 --resting-hr 48
 uv run python main.py zones --fthr 165 # FTHR-based heart-rate training zones
@@ -125,6 +134,65 @@ uv run python main.py analyze --file downloads/2026-05-01_123_Ride.fit
 uv run python main.py analyze --file downloads/2026-05-01_123_Ride.fit --weight 70
 uv run python main.py badges            # poster of all earned Garmin badges
 uv run python main.py badges --sort date --columns 20 --out my_badges.png
+```
+
+## Route heatmap (`heatmap`)
+
+`heatmap` reads the GPS tracks from your local FIT files and draws them as
+overlapping, semi-transparent polylines on a dark basemap — roads ridden
+repeatedly light up, like a personal Strava heatmap. It runs fully offline
+over the `download` output.
+
+`--city` filters **geographically**, not by filename. The city name is
+resolved to a centre coordinate and any activity whose track *starts* within
+`--radius` km (default 100) of that centre is kept. This is far more reliable
+than the old filename match: a Chengdu ride recorded as `天府大道` or `龙泉山`
+has no "Chengdu" in its name but still starts inside the radius, so it is
+included.
+
+City names are resolved in this order:
+
+1. A small built-in registry of common cities (English/pinyin and Chinese,
+   e.g. `chengdu`, `成都`) — instant and offline.
+2. A cached online lookup (OpenStreetMap Nominatim) for anything else; the
+   result is cached under `~/.cache/garmin-cycling/geocode.json`, so each city
+   only hits the network once. Pass `--no-geocode` to stay fully offline
+   (built-in + cached only).
+
+If a centre cannot be resolved at all, it falls back to the previous
+case-insensitive name/pinyin substring match, so nothing breaks offline.
+
+```bash
+uv run python main.py heatmap                    # all local rides
+uv run python main.py heatmap --year 2026        # one year
+uv run python main.py heatmap --city Chengdu     # rides starting <=100km from Chengdu
+uv run python main.py heatmap --city 成都 --radius 80
+uv run python main.py heatmap --city Munich --no-geocode  # offline only
+```
+
+## Total distance (`distance`)
+
+`distance` totals how far you've ridden, optionally for a single city using the
+same geographic filter as `heatmap` (a ride counts for a city when it *starts*
+within `--radius` km of the city centre, so `天府大道` / `龙泉山` rides count
+for Chengdu).
+
+By default it reads the Garmin activity list over the API — one paged request
+that already carries each ride's distance and start coordinates, so there is no
+file parsing and it returns in seconds. `--type` picks the activity type
+(default `cycling`; pass an empty string for all types).
+
+`--local` totals your downloaded FIT files instead (fully offline). That path
+parses every FIT file, so it is slower, but the files are decoded in parallel
+across CPU cores and progress is printed as it goes.
+
+```bash
+uv run python main.py distance                    # all cycling, via API
+uv run python main.py distance --city Chengdu     # rides starting <=100km from Chengdu
+uv run python main.py distance --city 成都 --year 2026 --radius 80
+uv run python main.py distance --type ""          # all activity types
+uv run python main.py distance --local            # from local FIT files (offline)
+uv run python main.py distance --local --city Chengdu --year 2026
 ```
 
 ## Single-file ride analysis (`analyze`)

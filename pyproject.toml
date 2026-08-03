@@ -40,3 +40,10 @@ select = ["E", "W", "F", "I", "UP", "B", "BLE"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
+filterwarnings = [
+    # Turn warnings into errors so our own code stays warning-clean...
+    "error",
+    # ...but ignore a third-party deprecation we can't fix: pypinyin still
+    # calls codecs.open() at import time (removed on Python 3.14+).
+    "ignore:codecs.open\\(\\) is deprecated:DeprecationWarning:pypinyin",
+]
