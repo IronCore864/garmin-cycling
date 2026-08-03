@@ -15,6 +15,7 @@ from pathlib import Path
 
 from garmin import calculate_zones, format_zones, load_config, make_cn_client
 from garmin.config import load_athlete_profile
+from garmin.heatmap import build_heatmap_html, load_tracks
 from garmin.laps import count_laps_in_directory
 from garmin.power import analyze_ride
 from garmin.training_load import analyze_readiness
@@ -23,6 +24,7 @@ from garmin.workflow import run_workflow
 from .reporting import (
     format_badge_summary,
     format_gear_report,
+    format_heatmap_summary,
     format_lap_report,
     format_readiness_report,
     format_ride_analysis,
@@ -87,6 +89,39 @@ def run_laps(args: argparse.Namespace) -> None:
         print(f"No FIT files found in {directory} for {start} to {end}.")
         return
     print(format_lap_report(start, end, results, scanned))
+
+
+def run_heatmap(args: argparse.Namespace) -> None:
+    directory = Path(args.dir)
+    if not directory.is_dir():
+        print(f"Directory not found: {directory}")
+        return
+
+    scope = " ".join(
+        str(s) for s in (args.year, args.city) if s is not None
+    )
+    print(f"Loading GPS tracks from {directory} (parsing FIT files)...")
+
+    def _on_progress(done: int, total: int) -> None:
+        if done == total or done % 25 == 0:
+            print(f"  Resolved {done}/{total} FIT files...")
+
+    tracks = load_tracks(
+        directory,
+        year=args.year,
+        city=args.city,
+        max_points=args.max_points,
+        on_progress=_on_progress,
+        use_cache=not args.no_cache,
+    )
+    if not tracks:
+        where = f" for {scope}" if scope else ""
+        print(f"No GPS tracks found in {directory}{where}.")
+        return
+
+    print(f"Rendering heatmap for {len(tracks)} activities...")
+    out = build_heatmap_html(tracks, args.out)
+    print(format_heatmap_summary(tracks, out))
 
 
 def _downloaded_activity_ids(out_dir: Path) -> set[str]:

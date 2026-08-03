@@ -17,6 +17,7 @@ dependencies = [
     "matplotlib",
     "fastapi>=0.115.0",
     "uvicorn",
+    "folium>=0.20.0",
 ]
 
 [dependency-groups]

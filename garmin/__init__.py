@@ -39,6 +39,15 @@ from .config import (
     load_config,
 )
 from .gear import GearActivity, GearReport
+from .heatmap import (
+    GpsTrack,
+    build_heatmap_html,
+    extract_track,
+    filter_tracks,
+    load_tracks,
+    location_from_label,
+    summarize_locations,
+)
 from .laps import (
     DEFAULT_LAKE,
     Lake,
@@ -98,6 +107,14 @@ __all__ = [
     # Gear
     "GearActivity",
     "GearReport",
+    # Heatmap
+    "GpsTrack",
+    "extract_track",
+    "load_tracks",
+    "filter_tracks",
+    "location_from_label",
+    "summarize_locations",
+    "build_heatmap_html",
     # Laps
     "Lake",
     "DEFAULT_LAKE",

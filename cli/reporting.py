@@ -13,6 +13,7 @@ from datetime import date
 
 from garmin.badges import compute_badge_stats, sort_badges
 from garmin.gear import GearReport
+from garmin.heatmap import GpsTrack, summarize_locations
 from garmin.laps import LapResult
 from garmin.power import RideAnalysis
 from garmin.training_load import ReadinessReport
@@ -183,6 +184,21 @@ def format_gear_report(report: GearReport) -> str:
         f"({report.total_duration_min / 60:.1f} hours)"
     )
     lines.append("=" * 70)
+    return "\n".join(lines)
+
+
+def format_heatmap_summary(tracks: list[GpsTrack], out_path) -> str:
+    """Render a summary of the rendered heatmap and its per-location counts."""
+    total_points = sum(len(t.points) for t in tracks)
+    lines: list[str] = []
+    lines.append(
+        f"Heatmap: {len(tracks)} activities, {total_points} GPS points."
+    )
+    lines.append("By location:")
+    for location, count in summarize_locations(tracks).items():
+        lines.append(f"  {location:<24s} {count:>4d}")
+    lines.append("")
+    lines.append(f"Saved to '{out_path}'. Open it in a browser.")
     return "\n".join(lines)
 
 

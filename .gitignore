@@ -14,3 +14,7 @@ downloads/
 
 # Generated images
 *.png
+
+# Generated maps / heatmap parse cache
+*.html
+.heatmap_cache.json

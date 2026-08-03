@@ -4,13 +4,15 @@ Garmin Connect utilities focused on cycling. It provides a reusable
 `garmin` package plus a few entry points:
 
 - **`main.py`** — thin launcher for the unified CLI (implemented in the
-  `cli` package) with five subcommands:
+  `cli` package) with subcommands:
   - `sync`: full workflow — sync CN→Global, latest cycling VO2max,
     power/HR analytics, single-ride analysis (decoupling, critical power/W′,
     coasting), lake lap counting, and a past-month VO2max image.
   - `gear`: list cycling activities grouped by gear (bike) for a year or a
     date range.
   - `laps`: count lake laps (circles) from downloaded FIT files in a date range.
+  - `heatmap`: render a Strava-style route heatmap (HTML) from local FIT
+    files, for all data, a given `--year`, or a single `--city`.
   - `download`: bulk-download activities in a date range as FIT/TCX,
     skipping any already present in the output directory (use `--force` to
     re-download).
@@ -109,6 +111,9 @@ uv run python main.py gear --start 2025-09-13 --end 2025-12-13
 uv run python main.py laps             # lake laps from ./downloads (year to date)
 uv run python main.py laps --year 2025
 uv run python main.py laps --month 5 --dir downloads
+uv run python main.py heatmap          # route heatmap of all local FIT files
+uv run python main.py heatmap --year 2026
+uv run python main.py heatmap --city Chengdu --out chengdu.html
 uv run python main.py download --start 2026-04-22 --end 2026-06-12 --format fit
 uv run python main.py download --all    # skips activities already in ./downloads
 uv run python main.py download --all --force  # re-download everything

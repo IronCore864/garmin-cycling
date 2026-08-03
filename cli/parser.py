@@ -12,6 +12,7 @@ from .commands import (
     run_badges,
     run_download,
     run_gear,
+    run_heatmap,
     run_laps,
     run_readiness,
     run_sync,
@@ -78,6 +79,41 @@ def build_parser() -> argparse.ArgumentParser:
         "--dir", default="downloads", help="Directory containing FIT files."
     )
     laps_parser.set_defaults(func=run_laps)
+
+    heatmap_parser = subparsers.add_parser(
+        "heatmap",
+        help="Render a Strava-style route heatmap (HTML) from local FIT files.",
+    )
+    heatmap_parser.add_argument(
+        "--dir", default="downloads", help="Directory containing FIT files."
+    )
+    heatmap_parser.add_argument(
+        "--out", default="heatmap.html", help="Output HTML file path."
+    )
+    heatmap_parser.add_argument(
+        "--year",
+        type=int,
+        default=None,
+        help="Only include activities from this year (default: all data).",
+    )
+    heatmap_parser.add_argument(
+        "--city",
+        default=None,
+        help="Only include activities whose location matches this name "
+        "(case-insensitive, e.g. Chengdu).",
+    )
+    heatmap_parser.add_argument(
+        "--max-points",
+        type=int,
+        default=500,
+        help="Max GPS points kept per activity (decimation; default 500).",
+    )
+    heatmap_parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Ignore the on-disk parse cache and re-parse every FIT file.",
+    )
+    heatmap_parser.set_defaults(func=run_heatmap)
 
     download_parser = subparsers.add_parser(
         "download", help="Download activities in a date range as FIT or TCX."
