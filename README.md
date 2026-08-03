@@ -14,9 +14,9 @@ Garmin Connect utilities focused on cycling. It provides a reusable
   - `heatmap`: render a Strava-style route heatmap (HTML) from local FIT
     files, for all data, a given `--year`, or a single `--city` (matched
     geographically — see below).
-  - `distance`: total ridden distance, optionally for one city (rides that
-    *start* within a radius of the city centre). Uses the Garmin API by
-    default (fast); `--local` totals local FIT files instead.
+  - `distance`: total ridden distance via the Garmin API (online-only),
+    optionally for one city (rides that *start* within a radius of the city
+    centre).
   - `download`: bulk-download activities in a date range as FIT/TCX,
     skipping any already present in the output directory (use `--force` to
     re-download).
@@ -126,7 +126,6 @@ uv run python main.py download --all --force  # re-download everything
 uv run python main.py distance                 # total distance (all activities, via API)
 uv run python main.py distance --city Chengdu  # km starting <=100km from Chengdu
 uv run python main.py distance --city 成都 --year 2026 --radius 80
-uv run python main.py distance --local         # total from local FIT files (offline)
 uv run python main.py readiness        # today's HR training load & train/rest advice
 uv run python main.py readiness --max-hr 190 --resting-hr 48
 uv run python main.py zones --fthr 165 # FTHR-based heart-rate training zones
@@ -182,17 +181,15 @@ that already carries each ride's distance and start coordinates, so there is no
 file parsing and it returns in seconds. `--type` picks the activity type
 (default `cycling`; pass an empty string for all types).
 
-`--local` totals your downloaded FIT files instead (fully offline). That path
-parses every FIT file, so it is slower, but the files are decoded in parallel
-across CPU cores and progress is printed as it goes.
+This command is online-only: distance is a quick, authoritative query against
+the API. (Offline work over already-downloaded FIT files is what `heatmap` is
+for.)
 
 ```bash
 uv run python main.py distance                    # all cycling, via API
 uv run python main.py distance --city Chengdu     # rides starting <=100km from Chengdu
 uv run python main.py distance --city 成都 --year 2026 --radius 80
 uv run python main.py distance --type ""          # all activity types
-uv run python main.py distance --local            # from local FIT files (offline)
-uv run python main.py distance --local --city Chengdu --year 2026
 ```
 
 ## Single-file ride analysis (`analyze`)

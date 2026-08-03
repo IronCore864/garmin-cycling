@@ -16,7 +16,7 @@ from pathlib import Path
 from garmin import calculate_zones, format_zones, load_config, make_cn_client
 from garmin._utils import safe_filename
 from garmin.config import load_athlete_profile
-from garmin.distance import distance_from_activities, distance_in_directory
+from garmin.distance import DistanceReport, distance_from_activities
 from garmin.geo import resolve_city_center
 from garmin.heatmap import build_heatmap_html, load_tracks
 from garmin.laps import count_laps_in_directory
@@ -143,35 +143,23 @@ def run_heatmap(args: argparse.Namespace) -> None:
 
 def run_distance(args: argparse.Namespace) -> None:
     center = None
-    geo_filtered = True
     if args.city:
         center = resolve_city_center(args.city, allow_network=not args.no_geocode)
-        geo_filtered = center is not None
-        if not geo_filtered:
+        if center is None:
+            # Without a centre we cannot geo-filter; summing every ride and
+            # labelling it as this city would be misleading, so report nothing.
             print(f"Could not resolve a centre for '{args.city}'.")
+            print(
+                format_distance_report(
+                    DistanceReport(total_km=0.0, activities=0, scanned=0),
+                    city=args.city,
+                    year=args.year,
+                    radius_km=args.radius,
+                    geo_filtered=False,
+                )
+            )
+            return
 
-    if args.local:
-        report = _distance_local(args, center)
-    else:
-        report = _distance_from_api(args, center)
-    if report is None:
-        return
-
-    print(
-        format_distance_report(
-            report,
-            city=args.city,
-            year=args.year,
-            radius_km=args.radius,
-            geo_filtered=geo_filtered,
-        )
-    )
-
-
-def _distance_from_api(
-    args: argparse.Namespace, center: tuple[float, float] | None
-):
-    """Total distance from the Garmin activity list (fast: one paged request)."""
     if args.year:
         start, end = f"{args.year}-01-01", f"{args.year}-12-31"
     else:
@@ -179,34 +167,17 @@ def _distance_from_api(
 
     client = make_cn_client(load_config())
     print(f"Fetching activities {start} to {end} from Garmin...")
-    activities = client.get_activities(
-        start, end, activity_type=args.type or None
-    )
+    activities = client.get_activities(start, end, activity_type=args.type or None)
     print(f"Summing distance over {len(activities)} activities...")
-    return distance_from_activities(
-        activities, center=center, radius_km=args.radius
-    )
+    report = distance_from_activities(activities, center=center, radius_km=args.radius)
 
-
-def _distance_local(args: argparse.Namespace, center: tuple[float, float] | None):
-    """Total distance from local FIT files (offline, parsed in parallel)."""
-    directory = Path(args.dir)
-    if not directory.is_dir():
-        print(f"Directory not found: {directory}")
-        return None
-
-    print(f"Reading distances from FIT files in {directory}...")
-
-    def _on_progress(done: int, total: int) -> None:
-        if done == total or done % 50 == 0:
-            print(f"  Processed {done}/{total} activities...")
-
-    return distance_in_directory(
-        directory,
-        center=center,
-        radius_km=args.radius,
-        year=args.year,
-        on_progress=_on_progress,
+    print(
+        format_distance_report(
+            report,
+            city=args.city,
+            year=args.year,
+            radius_km=args.radius,
+        )
     )
 
 

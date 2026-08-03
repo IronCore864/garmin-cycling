@@ -38,12 +38,7 @@ from .config import (
     load_athlete_profile,
     load_config,
 )
-from .distance import (
-    DistanceReport,
-    distance_from_activities,
-    distance_in_directory,
-    summarize_fit,
-)
+from .distance import DistanceReport, distance_from_activities
 from .gear import GearActivity, GearReport
 from .geo import CITY_CENTERS, haversine_m, resolve_city_center
 from .heatmap import (
@@ -121,8 +116,6 @@ __all__ = [
     # Distance
     "DistanceReport",
     "distance_from_activities",
-    "distance_in_directory",
-    "summarize_fit",
     # Heatmap
     "GpsTrack",
     "extract_track",

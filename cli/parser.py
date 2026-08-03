@@ -139,18 +139,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     distance_parser = subparsers.add_parser(
         "distance",
-        help="Total ridden distance from local FIT files, optionally for one "
+        help="Total ridden distance via the Garmin API, optionally for one "
         "city (rides starting within --radius km of its centre).",
-    )
-    distance_parser.add_argument(
-        "--dir", default="downloads", help="Directory containing FIT files."
     )
     distance_parser.add_argument(
         "--city",
         default=None,
         help="Only count activities that start near this city (English/pinyin "
         "or Chinese, e.g. 'chengdu' or '成都'). Resolved to a centre; rides "
-        "starting within --radius km are counted. Omit to count all files.",
+        "starting within --radius km are counted. Omit to count all rides.",
     )
     distance_parser.add_argument(
         "--radius",
@@ -168,19 +165,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-geocode",
         action="store_true",
         help="Never look a city up online; use only the built-in city list "
-        "and cached results (offline).",
+        "and cached results.",
     )
     distance_parser.add_argument(
         "--type",
         default="cycling",
-        help="Activity type to total over the API (default: cycling). Pass an "
-        "empty string to count all types. Ignored with --local.",
-    )
-    distance_parser.add_argument(
-        "--local",
-        action="store_true",
-        help="Compute from local FIT files in --dir (offline, parses files in "
-        "parallel) instead of the Garmin API.",
+        help="Activity type to total (default: cycling). Pass an "
+        "empty string to count all types.",
     )
     distance_parser.set_defaults(func=run_distance)
 
