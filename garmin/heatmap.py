@@ -32,6 +32,10 @@ _SEMI_TO_DEG = 180.0 / (2**31)
 # On-disk cache of parsed tracks so repeat runs skip re-parsing FIT files.
 _CACHE_FILENAME = ".heatmap_cache.json"
 _CACHE_VERSION = 1
+# Fidelity at which tracks are parsed and cached. Rendering decimates further
+# to the caller's ``max_points`` in-memory, so changing display resolution
+# never triggers a re-parse.
+_CACHE_MAX_POINTS = 2000
 # Parse this many files or fewer inline; above it, use a process pool.
 _PARALLEL_THRESHOLD = 2
 
@@ -157,17 +161,45 @@ def _extract_points_from_path(
         return []
 
 
+def _pinyin(text: str) -> str:
+    """Romanize Chinese characters to plain (toneless) pinyin.
+
+    Non-Chinese text passes through unchanged. Returns ``""`` if ``pypinyin``
+    is unavailable, so matching gracefully degrades to a plain substring.
+    """
+    try:
+        from pypinyin import Style, lazy_pinyin
+    except ImportError:  # pragma: no cover - pypinyin is a declared dependency
+        return ""
+    return "".join(lazy_pinyin(text, style=Style.NORMAL))
+
+
+def _location_match_key(location: str) -> str:
+    """Space-stripped, lowercased location plus its pinyin, for city matching.
+
+    Combining the raw name with its romanization lets an English/pinyin query
+    (``"chengdu"``) match a Chinese location (``"成都市"``) and vice versa.
+    """
+    return (location.lower() + _pinyin(location).lower()).replace(" ", "")
+
+
 def filter_tracks(
     tracks: list[GpsTrack],
     year: int | None = None,
     city: str | None = None,
 ) -> list[GpsTrack]:
-    """Keep tracks matching an optional ``year`` and/or ``city`` (substring)."""
+    """Keep tracks matching an optional ``year`` and/or ``city``.
+
+    City matching is a case-insensitive substring test against the location
+    name *and* its pinyin, so ``"chengdu"`` matches both ``"Chengdu"`` and
+    ``"成都市"``.
+    """
+    needle = city.lower().replace(" ", "") if city is not None else None
     result = []
     for track in tracks:
         if year is not None and not track.date.startswith(str(year)):
             continue
-        if city is not None and city.lower() not in track.location.lower():
+        if needle is not None and needle not in _location_match_key(track.location):
             continue
         result.append(track)
     return result
@@ -192,7 +224,9 @@ def load_tracks(
         year: Optional year filter (matched against the filename date prefix,
             so files are skipped before parsing).
         city: Optional location filter (case-insensitive substring).
-        max_points: Per-track decimation cap passed to :func:`extract_track`.
+        max_points: Per-track display cap. Tracks are cached at a fixed high
+            fidelity and decimated to this value in-memory, so changing it is
+            instant (no re-parse). Lower values suit wide-area maps.
         on_progress: Optional callback invoked as ``(done, total)`` as files
             are resolved (from cache or freshly parsed).
         use_cache: Read/write the on-disk parse cache (``.heatmap_cache.json``
@@ -210,7 +244,7 @@ def load_tracks(
     total = len(candidates)
 
     cache_path = directory / _CACHE_FILENAME
-    cache = _read_cache(cache_path, max_points) if use_cache else {}
+    cache = _read_cache(cache_path) if use_cache else {}
     updated_cache = dict(cache)  # preserve entries outside this run's filter
 
     points_by_name: dict[str, list[tuple[float, float]]] = {}
@@ -246,18 +280,20 @@ def load_tracks(
 
     if len(to_parse) <= _PARALLEL_THRESHOLD:
         for fp in to_parse:
-            _record(fp, _extract_points_from_path(str(fp), max_points))
+            _record(fp, _extract_points_from_path(str(fp), _CACHE_MAX_POINTS))
     else:
         with ProcessPoolExecutor() as executor:
             futures = {
-                executor.submit(_extract_points_from_path, str(fp), max_points): fp
+                executor.submit(
+                    _extract_points_from_path, str(fp), _CACHE_MAX_POINTS
+                ): fp
                 for fp in to_parse
             }
             for future in as_completed(futures):
                 _record(futures[future], future.result())
 
     if use_cache and to_parse:
-        _write_cache(cache_path, max_points, updated_cache)
+        _write_cache(cache_path, updated_cache)
 
     tracks: list[GpsTrack] = []
     for fp in candidates:
@@ -270,7 +306,7 @@ def load_tracks(
                 date=date_str or fp.name[:10],
                 name=label or fp.stem,
                 location=location_from_label(label),
-                points=points,
+                points=_decimate(points, max_points),
             )
         )
     if city is not None:
@@ -278,24 +314,25 @@ def load_tracks(
     return tracks
 
 
-def _read_cache(cache_path: Path, max_points: int) -> dict[str, dict]:
-    """Load the parse cache, ignoring it if the version or decimation differs."""
+def _read_cache(cache_path: Path) -> dict[str, dict]:
+    """Load the parse cache, ignoring it if the version or fidelity differs."""
     try:
         data = json.loads(cache_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    if data.get("version") != _CACHE_VERSION or data.get("max_points") != max_points:
+    if (
+        data.get("version") != _CACHE_VERSION
+        or data.get("max_points") != _CACHE_MAX_POINTS
+    ):
         return {}
     return data.get("entries", {})
 
 
-def _write_cache(
-    cache_path: Path, max_points: int, entries: dict[str, dict]
-) -> None:
+def _write_cache(cache_path: Path, entries: dict[str, dict]) -> None:
     """Persist the parse cache; failures are non-fatal (debug-logged)."""
     payload = {
         "version": _CACHE_VERSION,
-        "max_points": max_points,
+        "max_points": _CACHE_MAX_POINTS,
         "entries": entries,
     }
     try:

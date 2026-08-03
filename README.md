@@ -113,7 +113,8 @@ uv run python main.py laps --year 2025
 uv run python main.py laps --month 5 --dir downloads
 uv run python main.py heatmap          # route heatmap of all local FIT files
 uv run python main.py heatmap --year 2026
-uv run python main.py heatmap --city Chengdu --out chengdu.html
+uv run python main.py heatmap --city Chengdu             # -> chengdu.html
+uv run python main.py heatmap --city Chengdu --year 2026 # -> chengdu_2026.html
 uv run python main.py download --start 2026-04-22 --end 2026-06-12 --format fit
 uv run python main.py download --all    # skips activities already in ./downloads
 uv run python main.py download --all --force  # re-download everything

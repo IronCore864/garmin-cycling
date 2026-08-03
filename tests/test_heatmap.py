@@ -110,6 +110,21 @@ def test_filter_tracks_by_city_is_case_insensitive_substring():
     assert [t.location for t in kept] == ["Chengdu"]
 
 
+def test_filter_tracks_by_pinyin_matches_chinese_location():
+    tracks = [
+        _track("2026-01-01", "成都市 公路骑行"),
+        _track("2026-01-02", "青岛市 骑行"),
+    ]
+    kept = filter_tracks(tracks, city="chengdu")
+    assert [t.location for t in kept] == ["成都市 公路骑行"]
+
+
+def test_filter_tracks_by_chinese_query_matches_chinese_location():
+    tracks = [_track("2026-01-01", "成都市 公路骑行"), _track("2026-01-02", "Munich")]
+    kept = filter_tracks(tracks, city="成都")
+    assert [t.location for t in kept] == ["成都市 公路骑行"]
+
+
 def test_summarize_locations_counts_most_common_first():
     tracks = [
         _track("2026-01-01", "Chengdu"),

@@ -88,7 +88,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--dir", default="downloads", help="Directory containing FIT files."
     )
     heatmap_parser.add_argument(
-        "--out", default="heatmap.html", help="Output HTML file path."
+        "--out",
+        default=None,
+        help="Output HTML file path (default: derived from --city/--year, "
+        "e.g. chengdu_2026.html, or heatmap.html).",
     )
     heatmap_parser.add_argument(
         "--year",
@@ -100,13 +103,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--city",
         default=None,
         help="Only include activities whose location matches this name "
-        "(case-insensitive, e.g. Chengdu).",
+        "(case-insensitive; matches English/pinyin or Chinese, e.g. "
+        "'chengdu' also matches '成都市').",
     )
     heatmap_parser.add_argument(
         "--max-points",
         type=int,
-        default=500,
-        help="Max GPS points kept per activity (decimation; default 500).",
+        default=2000,
+        help="Max GPS points drawn per activity (default 2000 = full stored "
+        "fidelity). Lower it to shrink wide-area maps; changing it is instant "
+        "(no re-parse).",
     )
     heatmap_parser.add_argument(
         "--no-cache",

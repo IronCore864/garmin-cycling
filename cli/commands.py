@@ -14,6 +14,7 @@ from datetime import date
 from pathlib import Path
 
 from garmin import calculate_zones, format_zones, load_config, make_cn_client
+from garmin._utils import safe_filename
 from garmin.config import load_athlete_profile
 from garmin.heatmap import build_heatmap_html, load_tracks
 from garmin.laps import count_laps_in_directory
@@ -91,6 +92,16 @@ def run_laps(args: argparse.Namespace) -> None:
     print(format_lap_report(start, end, results, scanned))
 
 
+def _heatmap_output_name(city: str | None, year: int | None) -> str:
+    """Default heatmap filename derived from the active city/year filters."""
+    parts: list[str] = []
+    if city:
+        parts.append(safe_filename(city).lower())
+    if year is not None:
+        parts.append(str(year))
+    return f"{'_'.join(parts) if parts else 'heatmap'}.html"
+
+
 def run_heatmap(args: argparse.Namespace) -> None:
     directory = Path(args.dir)
     if not directory.is_dir():
@@ -119,8 +130,9 @@ def run_heatmap(args: argparse.Namespace) -> None:
         print(f"No GPS tracks found in {directory}{where}.")
         return
 
+    out_path = args.out or _heatmap_output_name(args.city, args.year)
     print(f"Rendering heatmap for {len(tracks)} activities...")
-    out = build_heatmap_html(tracks, args.out)
+    out = build_heatmap_html(tracks, out_path)
     print(format_heatmap_summary(tracks, out))
 
 
