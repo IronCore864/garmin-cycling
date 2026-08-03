@@ -34,13 +34,26 @@ def build_parser() -> argparse.ArgumentParser:
     sync_parser.set_defaults(func=run_sync)
 
     gear_parser = subparsers.add_parser(
-        "gear", help="List a year's cycling activities categorized by gear."
+        "gear",
+        help="List cycling activities categorized by gear, for a year or a "
+        "date range.",
     )
     gear_parser.add_argument(
         "--year",
         type=int,
-        default=date.today().year,
-        help="Year to report on (default: current year).",
+        default=None,
+        help="Report on a full calendar year (default: current year unless "
+        "--start is given).",
+    )
+    gear_parser.add_argument(
+        "--start",
+        default=None,
+        help="Start date YYYY-MM-DD (inclusive). Overrides --year.",
+    )
+    gear_parser.add_argument(
+        "--end",
+        default=date.today().isoformat(),
+        help="End date YYYY-MM-DD (inclusive, default: today). Used with --start.",
     )
     gear_parser.set_defaults(func=run_gear)
 

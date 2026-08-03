@@ -1,5 +1,7 @@
 """Tests for garmin.gear value objects and grouping logic."""
 
+from datetime import date
+
 from garmin.gear import GearActivity, GearMixin, GearReport, _gear_name
 
 
@@ -37,7 +39,12 @@ def test_gear_report_totals():
     a = GearActivity(1, "A", "2026-01-01", 10.0, 30.0, 20.0)
     b = GearActivity(2, "B", "2026-01-02", 20.0, 60.0, 20.0)
     c = GearActivity(3, "C", "2026-01-03", 5.0, 15.0, 20.0)
-    report = GearReport(year=2026, by_gear={"Bike": [a, b]}, no_gear=[c])
+    report = GearReport(
+        start=date(2026, 1, 1),
+        end=date(2026, 12, 31),
+        by_gear={"Bike": [a, b]},
+        no_gear=[c],
+    )
     assert report.total_rides == 3
     assert report.total_distance_km == 35.0
     assert report.total_duration_min == 105.0
@@ -70,7 +77,7 @@ def test_build_gear_report_groups_by_gear_and_no_gear():
     }
     client = _FakeGearClient(activities, gear_by_activity)
 
-    report = client.build_gear_report(2026)
+    report = client.build_gear_report("2026-01-01", "2026-12-31")
     assert set(report.by_gear) == {"Road Bike"}
     assert len(report.by_gear["Road Bike"]) == 2
     assert len(report.no_gear) == 1
@@ -85,6 +92,6 @@ def test_build_gear_report_invokes_progress_callback():
     client = _FakeGearClient(activities, {})
     seen = []
     client.build_gear_report(
-        2026, on_progress=lambda done, total: seen.append((done, total))
+        "2026-01-01", "2026-12-31", on_progress=lambda done, total: seen.append((done, total))
     )
     assert seen == [(1, 3), (2, 3), (3, 3)]

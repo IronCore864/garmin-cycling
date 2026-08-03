@@ -8,7 +8,8 @@ Garmin Connect utilities focused on cycling. It provides a reusable
   - `sync`: full workflow — sync CN→Global, latest cycling VO2max,
     power/HR analytics, single-ride analysis (decoupling, critical power/W′,
     coasting), lake lap counting, and a past-month VO2max image.
-  - `gear`: list a year's cycling activities grouped by gear (bike).
+  - `gear`: list cycling activities grouped by gear (bike) for a year or a
+    date range.
   - `laps`: count lake laps (circles) from downloaded FIT files in a date range.
   - `download`: bulk-download activities in a date range as FIT/TCX.
   - `analyze`: analyze a single local FIT file offline — aerobic decoupling
@@ -100,6 +101,8 @@ uv run python main.py sync             # sync + analysis workflow
 uv run python main.py sync --vo2max-image /tmp/vo2max.png
 uv run python main.py gear             # this year's activities grouped by gear
 uv run python main.py gear --year 2025
+uv run python main.py gear --start 2025-09-13            # from a date to today
+uv run python main.py gear --start 2025-09-13 --end 2025-12-13
 uv run python main.py laps             # lake laps from ./downloads (year to date)
 uv run python main.py laps --year 2025
 uv run python main.py laps --month 5 --dir downloads

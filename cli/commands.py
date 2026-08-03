@@ -34,17 +34,26 @@ def run_sync(args: argparse.Namespace) -> None:
     print(format_workflow_summary(result))
 
 
+def _resolve_gear_date_range(args: argparse.Namespace) -> tuple[date, date]:
+    """Resolve the gear command's date range from year/start/end flags."""
+    if args.start:
+        return date.fromisoformat(args.start), date.fromisoformat(args.end)
+    year = args.year or date.today().year
+    return date(year, 1, 1), date(year, 12, 31)
+
+
 def run_gear(args: argparse.Namespace) -> None:
+    start, end = _resolve_gear_date_range(args)
     client = make_cn_client(load_config())
-    print(f"Fetching cycling activities for {args.year}...")
+    print(f"Fetching cycling activities from {start} to {end}...")
 
     def _on_progress(done: int, total: int) -> None:
         if done % 10 == 0:
             print(f"  Processed {done}/{total} activities...")
 
-    report = client.build_gear_report(args.year, on_progress=_on_progress)
+    report = client.build_gear_report(start, end, on_progress=_on_progress)
     if report.total_rides == 0:
-        print(f"No cycling activities found in {args.year}.")
+        print(f"No cycling activities found from {start} to {end}.")
         return
     print("\n" + format_gear_report(report))
 

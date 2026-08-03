@@ -43,9 +43,10 @@ class GearActivity:
 
 @dataclass(frozen=True)
 class GearReport:
-    """A year's cycling activities grouped by the gear (bike) used."""
+    """Cycling activities in a date range, grouped by the gear (bike) used."""
 
-    year: int
+    start: date
+    end: date
     by_gear: dict[str, list[GearActivity]]
     no_gear: list[GearActivity]
 
@@ -168,13 +169,15 @@ class GearMixin:
 
     def build_gear_report(
         self,
-        year: int,
+        start_date: str | date,
+        end_date: str | date | None = None,
         on_progress: Callable[[int, int], None] | None = None,
     ) -> GearReport:
-        """Group a year's cycling activities by the gear (bike) used.
+        """Group a date range's cycling activities by the gear (bike) used.
 
         Args:
-            year: Calendar year to report on.
+            start_date: Start of the range (inclusive), YYYY-MM-DD or date.
+            end_date: End of the range (inclusive). Defaults to today.
             on_progress: Optional callback invoked as ``(done, total)`` after
                 each activity, so callers (e.g. a CLI) can show progress.
 
@@ -182,9 +185,9 @@ class GearMixin:
             A :class:`GearReport` with activities grouped per gear plus a
             no-gear bucket.
         """
-        activities = self.get_activities(
-            f"{year}-01-01", f"{year}-12-31", activity_type="cycling"
-        )
+        start = parse_date(start_date)
+        end = parse_date(end_date) if end_date else date.today()
+        activities = self.get_activities(start, end, activity_type="cycling")
 
         by_gear: dict[str, list[GearActivity]] = defaultdict(list)
         no_gear: list[GearActivity] = []
@@ -200,4 +203,6 @@ class GearMixin:
             if on_progress is not None:
                 on_progress(i, total)
 
-        return GearReport(year=year, by_gear=dict(by_gear), no_gear=no_gear)
+        return GearReport(
+            start=start, end=end, by_gear=dict(by_gear), no_gear=no_gear
+        )

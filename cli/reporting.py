@@ -139,7 +139,9 @@ def format_gear_report(report: GearReport) -> str:
     """Render a :class:`garmin.gear.GearReport` as text."""
     lines: list[str] = []
     lines.append("=" * 70)
-    lines.append(f"  {report.year} CYCLING ACTIVITIES BY GEAR (BIKE)")
+    lines.append(
+        f"  CYCLING ACTIVITIES BY GEAR (BIKE): {report.start} to {report.end}"
+    )
     lines.append("=" * 70)
 
     def _activity_lines(activities) -> None:

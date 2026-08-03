@@ -75,9 +75,14 @@ def test_format_workflow_summary_single_circle_singular():
 def test_format_gear_report_contains_gear_and_totals():
     a = GearActivity(1, "Ride A", "2026-01-01 08:00", 10.0, 30.0, 20.0)
     b = GearActivity(2, "Ride B", "2026-01-02 08:00", 20.0, 60.0, 20.0)
-    report = GearReport(year=2026, by_gear={"Road Bike": [a]}, no_gear=[b])
+    report = GearReport(
+        start=date(2026, 1, 1),
+        end=date(2026, 12, 31),
+        by_gear={"Road Bike": [a]},
+        no_gear=[b],
+    )
     text = format_gear_report(report)
-    assert "2026 CYCLING ACTIVITIES BY GEAR" in text
+    assert "CYCLING ACTIVITIES BY GEAR (BIKE): 2026-01-01 to 2026-12-31" in text
     assert "Road Bike" in text
     assert "No Gear Assigned" in text
     assert "TOTAL: 2 rides" in text
