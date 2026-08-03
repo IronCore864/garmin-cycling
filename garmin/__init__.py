@@ -11,6 +11,8 @@ as methods on a client instance (e.g. ``client.count_latest_activity_laps()``).
   - ``activities``: activity listing and download
   - ``gear``      : gear (bike) endpoints and stats
   - ``vo2``       : VO2 max retrieval and monthly plotting
+  - ``weight``    : body-weight retrieval and history plotting
+  - ``badges``    : earned-badge retrieval and a show-off poster image
   - ``analytics`` : power/HR analytics (max avg power by duration)
   - ``laps``      : lake lap (circle) counting
   - ``sync``      : CN -> Global activity sync
@@ -19,6 +21,15 @@ as methods on a client instance (e.g. ``client.count_latest_activity_laps()``).
 """
 
 from .analytics import max_avg_pwr_and_hr
+from .badges import (
+    BadgeStats,
+    badge_image_url,
+    compute_badge_stats,
+    dominant_color,
+    render_badge_color_mosaic,
+    render_badge_poster,
+    sort_badges,
+)
 from .client import GarminClient, make_cn_client, make_global_client
 from .config import (
     AthleteProfile,
@@ -76,6 +87,14 @@ __all__ = [
     "load_athlete_profile",
     # Analytics
     "max_avg_pwr_and_hr",
+    # Badges
+    "BadgeStats",
+    "badge_image_url",
+    "compute_badge_stats",
+    "sort_badges",
+    "dominant_color",
+    "render_badge_poster",
+    "render_badge_color_mosaic",
     # Gear
     "GearActivity",
     "GearReport",

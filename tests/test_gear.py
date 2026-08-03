@@ -92,6 +92,8 @@ def test_build_gear_report_invokes_progress_callback():
     client = _FakeGearClient(activities, {})
     seen = []
     client.build_gear_report(
-        "2026-01-01", "2026-12-31", on_progress=lambda done, total: seen.append((done, total))
+        "2026-01-01",
+        "2026-12-31",
+        on_progress=lambda done, total: seen.append((done, total)),
     )
     assert seen == [(1, 3), (2, 3), (3, 3)]

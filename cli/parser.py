@@ -9,11 +9,13 @@ from garmin.workflow import DEFAULT_VO2MAX_IMAGE
 
 from .commands import (
     run_analyze,
+    run_badges,
     run_download,
     run_gear,
     run_laps,
     run_readiness,
     run_sync,
+    run_weight,
     run_zones,
 )
 
@@ -161,5 +163,56 @@ def build_parser() -> argparse.ArgumentParser:
         help="Rider weight in kg (enables W/kg and a weight-aware phenotype).",
     )
     analyze_parser.set_defaults(func=run_analyze)
+
+    weight_parser = subparsers.add_parser(
+        "weight",
+        help="Fetch body-weight history from Garmin CN and plot it.",
+    )
+    weight_parser.add_argument(
+        "--start", default="2022-07-01", help="Start date YYYY-MM-DD (inclusive)."
+    )
+    weight_parser.add_argument(
+        "--end",
+        default=date.today().isoformat(),
+        help="End date YYYY-MM-DD (inclusive, default: today).",
+    )
+    weight_parser.add_argument(
+        "--out", default="weight.png", help="Output path for the weight image."
+    )
+    weight_parser.set_defaults(func=run_weight)
+
+    badges_parser = subparsers.add_parser(
+        "badges",
+        help="Fetch earned Garmin badges and render a show-off poster image.",
+    )
+    badges_parser.add_argument(
+        "--out", default="badges.png", help="Output path for the badges poster."
+    )
+    badges_parser.add_argument(
+        "--style",
+        choices=["grid", "color"],
+        default="grid",
+        help="Poster style: uniform grid, or a colour-sorted bicycle shape "
+        "(default: grid).",
+    )
+    badges_parser.add_argument(
+        "--sort",
+        choices=["points", "date", "category"],
+        default="points",
+        help="Badge ordering in the grid (default: points).",
+    )
+    badges_parser.add_argument(
+        "--columns",
+        type=int,
+        default=16,
+        help="Number of badges per row (default: 16).",
+    )
+    badges_parser.add_argument(
+        "--res",
+        choices=["mdpi", "hdpi", "xhdpi", "xxhdpi"],
+        default="xxhdpi",
+        help="Badge artwork resolution (default: xxhdpi, highest).",
+    )
+    badges_parser.set_defaults(func=run_badges)
 
     return parser
