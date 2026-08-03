@@ -11,7 +11,9 @@ Garmin Connect utilities focused on cycling. It provides a reusable
   - `gear`: list cycling activities grouped by gear (bike) for a year or a
     date range.
   - `laps`: count lake laps (circles) from downloaded FIT files in a date range.
-  - `download`: bulk-download activities in a date range as FIT/TCX.
+  - `download`: bulk-download activities in a date range as FIT/TCX,
+    skipping any already present in the output directory (use `--force` to
+    re-download).
   - `analyze`: analyze a single local FIT file offline — aerobic decoupling
     (Pw:Hr) + efficiency factor, critical power / W′ + rider phenotype, and a
     coasting/pedaling breakdown.
@@ -108,6 +110,8 @@ uv run python main.py laps             # lake laps from ./downloads (year to dat
 uv run python main.py laps --year 2025
 uv run python main.py laps --month 5 --dir downloads
 uv run python main.py download --start 2026-04-22 --end 2026-06-12 --format fit
+uv run python main.py download --all    # skips activities already in ./downloads
+uv run python main.py download --all --force  # re-download everything
 uv run python main.py readiness        # today's HR training load & train/rest advice
 uv run python main.py readiness --max-hr 190 --resting-hr 48
 uv run python main.py zones --fthr 165 # FTHR-based heart-rate training zones

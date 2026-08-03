@@ -49,8 +49,7 @@ def run_gear(args: argparse.Namespace) -> None:
     print(f"Fetching cycling activities from {start} to {end}...")
 
     def _on_progress(done: int, total: int) -> None:
-        if done % 10 == 0:
-            print(f"  Processed {done}/{total} activities...")
+        print(f"  Checked {done}/{total} bikes...")
 
     report = client.build_gear_report(start, end, on_progress=_on_progress)
     if report.total_rides == 0:
@@ -90,6 +89,24 @@ def run_laps(args: argparse.Namespace) -> None:
     print(format_lap_report(start, end, results, scanned))
 
 
+def _downloaded_activity_ids(out_dir: Path) -> set[str]:
+    """Activity IDs already present in ``out_dir``.
+
+    Downloads are named ``{date}_{activityId}_{safe-name}.{ext}``, so the ID is
+    the token between the first two underscores.
+    """
+    ids: set[str] = set()
+    if not out_dir.is_dir():
+        return ids
+    for path in out_dir.iterdir():
+        if not path.is_file():
+            continue
+        parts = path.name.split("_")
+        if len(parts) >= 2 and parts[1].isdigit():
+            ids.add(parts[1])
+    return ids
+
+
 def run_download(args: argparse.Namespace) -> None:
     today = date.today()
     if args.all:
@@ -108,14 +125,26 @@ def run_download(args: argparse.Namespace) -> None:
         print("No activities found in the given date range.")
         return
 
+    existing = set() if args.force else _downloaded_activity_ids(out_dir)
+    pending = [a for a in activities if str(a.get("activityId")) not in existing]
+    skipped = len(activities) - len(pending)
+
+    if not pending:
+        print(
+            f"Found {len(activities)} activities; all already downloaded "
+            f"in '{out_dir}'. Nothing to do."
+        )
+        return
+
     print(
-        f"Found {len(activities)} activities. "
+        f"Found {len(activities)} activities "
+        f"({skipped} already downloaded, {len(pending)} to fetch). "
         f"Downloading as {args.format.upper()}...\n"
     )
 
     failures: list[tuple[str, str]] = []
     total_files = 0
-    for i, activity in enumerate(activities, start=1):
+    for i, activity in enumerate(pending, start=1):
         activity_id = activity.get("activityId")
         name = activity.get("activityName") or "activity"
         try:
@@ -124,12 +153,14 @@ def run_download(args: argparse.Namespace) -> None:
             )
             total_files += len(saved)
             for p in saved:
-                print(f"  [{i}/{len(activities)}] {p.name}")
+                print(f"  [{i}/{len(pending)}] {p.name}")
         except Exception as exc:  # noqa: BLE001 -- report and continue per activity
-            print(f"  [{i}/{len(activities)}] FAILED {activity_id} ({name}): {exc}")
+            print(f"  [{i}/{len(pending)}] FAILED {activity_id} ({name}): {exc}")
             failures.append((str(activity_id), str(exc)))
 
     print(f"\nDone. Saved {total_files} file(s) to '{out_dir}'.")
+    if skipped:
+        print(f"Skipped {skipped} already-downloaded activity(ies).")
     if failures:
         print(f"{len(failures)} activity(ies) failed:")
         for aid, err in failures:

@@ -51,17 +51,21 @@ def test_gear_report_totals():
 
 
 class _FakeGearClient(GearMixin):
-    """A GearMixin with the two endpoints it depends on stubbed out."""
+    """A GearMixin with the endpoints build_gear_report depends on stubbed."""
 
-    def __init__(self, activities, gear_by_activity):
+    def __init__(self, activities, gear, activities_by_gear):
         self._activities = activities
-        self._gear_by_activity = gear_by_activity
+        self._gear = gear
+        self._activities_by_gear = activities_by_gear
 
     def get_activities(self, start_date, end_date=None, activity_type=None):
         return self._activities
 
-    def get_activity_gear(self, activity_id):
-        return self._gear_by_activity.get(activity_id, [])
+    def get_gear(self):
+        return self._gear
+
+    def get_gear_activities(self, gear_uuid, start_date=None, end_date=None):
+        return self._activities_by_gear.get(gear_uuid, [])
 
 
 def test_build_gear_report_groups_by_gear_and_no_gear():
@@ -70,12 +74,12 @@ def test_build_gear_report_groups_by_gear_and_no_gear():
         {"activityId": 2, "activityName": "R2", "distance": 20000, "duration": 3600},
         {"activityId": 3, "activityName": "R3", "distance": 5000, "duration": 900},
     ]
-    gear_by_activity = {
-        1: [{"displayName": "Road Bike"}],
-        2: [{"displayName": "Road Bike"}],
-        3: [],  # no gear
+    gear = [{"uuid": "road", "displayName": "Road Bike"}]
+    activities_by_gear = {
+        # activity 3 is on no gear
+        "road": [{"activityId": 1}, {"activityId": 2}],
     }
-    client = _FakeGearClient(activities, gear_by_activity)
+    client = _FakeGearClient(activities, gear, activities_by_gear)
 
     report = client.build_gear_report("2026-01-01", "2026-12-31")
     assert set(report.by_gear) == {"Road Bike"}
@@ -89,11 +93,12 @@ def test_build_gear_report_invokes_progress_callback():
         {"activityId": i, "activityName": f"R{i}", "distance": 1000, "duration": 600}
         for i in range(3)
     ]
-    client = _FakeGearClient(activities, {})
+    gear = [{"uuid": "a", "displayName": "A"}, {"uuid": "b", "displayName": "B"}]
+    client = _FakeGearClient(activities, gear, {})
     seen = []
     client.build_gear_report(
         "2026-01-01",
         "2026-12-31",
         on_progress=lambda done, total: seen.append((done, total)),
     )
-    assert seen == [(1, 3), (2, 3), (3, 3)]
+    assert seen == [(1, 2), (2, 2)]

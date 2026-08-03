@@ -175,11 +175,15 @@ class GearMixin:
     ) -> GearReport:
         """Group a date range's cycling activities by the gear (bike) used.
 
+        Resolves gear with one request per bike (a handful) instead of one
+        request per activity, which is dramatically faster over long ranges.
+
         Args:
             start_date: Start of the range (inclusive), YYYY-MM-DD or date.
             end_date: End of the range (inclusive). Defaults to today.
             on_progress: Optional callback invoked as ``(done, total)`` after
-                each activity, so callers (e.g. a CLI) can show progress.
+                each bike is processed, so callers (e.g. a CLI) can show
+                progress.
 
         Returns:
             A :class:`GearReport` with activities grouped per gear plus a
@@ -189,19 +193,28 @@ class GearMixin:
         end = parse_date(end_date) if end_date else date.today()
         activities = self.get_activities(start, end, activity_type="cycling")
 
-        by_gear: dict[str, list[GearActivity]] = defaultdict(list)
-        no_gear: list[GearActivity] = []
-        total = len(activities)
-        for i, activity in enumerate(activities, start=1):
-            info = GearActivity.from_activity(activity)
-            gear_list = self.get_activity_gear(info.id)
-            if gear_list:
-                for gear in gear_list:
-                    by_gear[_gear_name(gear)].append(info)
-            else:
-                no_gear.append(info)
+        gears = self.get_gear()
+        names_by_activity: dict[int | str | None, list[str]] = defaultdict(list)
+        total = len(gears)
+        for i, gear in enumerate(gears, start=1):
+            uuid = gear.get("uuid")
+            if uuid:
+                name = _gear_name(gear)
+                for used in self.get_gear_activities(uuid, start, end):
+                    names_by_activity[used.get("activityId")].append(name)
             if on_progress is not None:
                 on_progress(i, total)
+
+        by_gear: dict[str, list[GearActivity]] = defaultdict(list)
+        no_gear: list[GearActivity] = []
+        for activity in activities:
+            info = GearActivity.from_activity(activity)
+            names = names_by_activity.get(info.id)
+            if names:
+                for name in names:
+                    by_gear[name].append(info)
+            else:
+                no_gear.append(info)
 
         return GearReport(
             start=start, end=end, by_gear=dict(by_gear), no_gear=no_gear

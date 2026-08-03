@@ -116,6 +116,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional activity type filter (e.g. cycling, running).",
     )
+    download_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-download activities even if already present in --out "
+        "(default: skip already-downloaded activities).",
+    )
     download_parser.set_defaults(func=run_download)
 
     readiness_parser = subparsers.add_parser(
